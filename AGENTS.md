@@ -2,16 +2,42 @@
 
 ACO-based clustering (`0.2.0a1`, Python 3.14, scipy CSR + numba `@njit`).
 
-## Start here
+## Read CONTRIBUTING.md first
 
-- Architecture, commands, branch and release rules -> this file.
-- How to contribute, and the same rules for humans -> `CONTRIBUTING.md`.
-- Docstring conventions the linter cannot check -> `DOCSTRINGS.md`.
-- What changed and what broke -> `CHANGELOG.md`.
+**[CONTRIBUTING.md](CONTRIBUTING.md) is the binding document, and it applies
+to agents exactly as written.** It carries the whole development process:
+environment setup, the verify chain and what runs at which stage, branch
+rules, commit rules, pull requests, releases, and the section on what an agent
+may and may not do on its own. None of that is repeated here - a rule stated
+in two places drifts, and this repository has already shipped two counters
+that disagreed with reality because of it.
+
+This file is the other half: what the code IS, so that a rule in CONTRIBUTING
+can be applied to it. Architecture, test layout, the style choices a linter
+cannot express, and the maintainer's own working setup.
 
 Working notes live under `tmp/`, which is gitignored: task specs, review
 verdicts, and commit drafts. They are absent from git history by design, so
 do not link to them from anything that ships.
+
+## Non-negotiable
+
+Restated from CONTRIBUTING.md because a miss here is expensive and often
+cannot be undone. Everything else, read there.
+
+- **Never delete a file.** List the paths and the command; the maintainer runs
+  it.
+- **Never bump the version, create a tag, or push one.**
+- **Never use `--no-verify`.** A failing hook is reporting something.
+- **Never report a check as passing without its output.** "All green" is a
+  claim, not evidence.
+- **Never add an attribution trailer.** The commit-msg hook rejects every
+  `Co-Authored-By:` and `Signed-off-by:`.
+- **Do not touch `.env` or any file holding secrets.**
+- **Do not add files that pin the repository to one assistant.** `CLAUDE.md`,
+  `.cursorrules`, `.mcp.json` and their kin are gitignored on purpose. This
+  file is the exception, because every agent reads it.
+- Coder edits only `src/intelliant/` unless told otherwise.
 
 ## Commands
 
@@ -31,188 +57,31 @@ uv run cz commit                           # interactive conventional commit
 
 Pre-report order: `ruff check src/` -> `pyright src/intelliant` -> `pytest tests/`. All three must pass.
 
-Enforcement (not discipline): `ruff` + `cz check` run per commit; `pyright` and
-`pytest --cov` run on **push** (`pre-push` hook - slow per commit, and a hook
-people skip is worse than a slow one). `filterwarnings = ["error"]` makes the
-zero-warning rule a failure, `--strict-markers` makes a typo'd marker a failure.
-Coverage lives in the hook rather than in `addopts` so running one test file is
-not gated by `fail_under`. Numba `@njit` bodies are excluded from coverage - the
-tracer cannot see compiled code, so counting them understates the real number.
+Two artifacts of this setup are worth knowing before reading a result wrong.
+`filterwarnings = ["error"]` makes the zero-warning rule a failure and
+`--strict-markers` makes a typo'd marker a failure, so both surface as test
+errors rather than as notices. And numba `@njit` bodies are excluded from
+coverage - the tracer cannot see compiled code, and counting them understates
+the real number.
 
-### Release gate
-
-These used to be a checklist people remembered; CI now runs them on every push
-to `main`. Reach for them by hand only when checking before that push:
-
-```bash
-uv run pytest tests/ -m slow               # the 50k scale test, excluded by default
-uv run deptry .                            # dependency hygiene
-uv run ruff check --select DOC --ignore DOC502 --preview src/
-```
+Release-gate commands, the branch table, and the release procedure are in
+CONTRIBUTING.md.
 
 `bandit` and `vulture` are installed but deliberately unwired: low signal on a
 numeric library. Run them ad hoc or drop them.
-
-## Commits
-
-Conventional Commits, validated by the `cz check` commit-msg hook. The hook
-checks the FORM, not the information - these rules cover the rest:
-
-- **A repeated subject line means the commit should have been an `--amend` or a
-  squash.** The history carries five identical
-  `feat: add simple_blobs intelliant etalon notebook` commits; nothing can be
-  reconstructed from that. Iterating on the same artifact is one commit.
-- **Put the "why" in the commit body.** The subject says what changed; the body
-  says what was rejected and on what grounds. For a multi-year project the
-  rationale attached to the diff is the asset, and `tmp/` is gitignored.
-- Scope a commit to one concern - source, tests, notebooks and config move
-  separately.
-- **Never sign a commit with a model.** No `Co-Authored-By: <model>` trailer,
-  no attribution of any kind. Several different models have worked on this
-  repository; naming one of them misstates who produced the work, and the
-  history is a record of decisions, not of tooling.
-
-### Who may commit
-
-Commit messages are DRAFTED INTO `tmp/commits/`, not straight into git. The
-maintainer reads the draft and then either approves the commit and push or
-performs it personally.
-
-The only exception is the strong model driving a session, which may commit and
-push on its own judgement so that routine work does not need per-command
-approval. Every other agent operates under manual control or with explicit
-permission for each commit - the point is that nothing reaches a published
-branch without the maintainer having read it.
-
-## Branches, pushes and releases
-
-`main` is the published state. `dev` is where work happens. Feature branches
-come off `dev` and go back through a pull request.
-
-**Nothing is ever committed to `main` directly.** The `no-commit-to-branch`
-hook enforces it locally; `main` receives merges. One direct edit there turns
-every future release merge into a conflict.
-
-What runs when, and why it is split this way:
-
-| Stage | Runs | Cost |
-|---|---|---|
-| commit | ruff check, ruff format, whitespace, toml/yaml, large files, private keys, AST, merge markers | seconds |
-| commit-msg | `cz check`, attribution-trailer rejection | instant |
-| push | pyright, pytest with coverage | ~1 min |
-| CI on `dev` and PRs | the whole verify chain | |
-| CI on `main` | the above plus the release gate: scale test, deptry, version consistency, wheel build and install into a clean environment | |
-
-pyright and pytest run on push rather than per commit because a hook people
-skip is worse than a slow one. CI repeats everything because a local hook is
-bypassable with `--no-verify`, and because an agent reporting "all green" is
-not evidence.
-
-`dev` asks for working, clean code. `main` asks whether this could be tagged
-right now.
-
-### Verifying
-
-**Check on a clean clone, not in the working folder.** The working folder
-holds untracked leftovers and a populated `.venv`, and it will pass things CI
-fails. This has already happened once: a test imported a module that existed
-locally but was not in the repository, and the whole test collection would
-have failed on the first push.
-
-```bash
-git clone --branch dev . /tmp/verify && cd /tmp/verify
-uv sync --all-groups --all-extras --frozen
-uv run ruff check src/ tests/ && uv run pyright src/intelliant && uv run pytest tests/ --cov
-```
-
-### Releasing
-
-Maintainer only, and never by an agent on its own initiative.
-
-Versions follow project MILESTONES, not commit types, so the number is always
-passed explicitly - commitizen would otherwise derive it from the history,
-and a single `feat!` would land 1.0.0 early:
-
-```bash
-uv run cz bump --yes 0.2.0a1
-uv lock                       # the lock carries the project version too
-git add uv.lock && git commit --amend --no-edit
-```
-
-Two traps, both hit on the first release. `uv.lock` records this project's
-version, so a bump leaves it stale and CI's `uv sync --frozen` refuses a lock
-that disagrees with `pyproject.toml` - after the tag already exists. And
-without `--yes`, commitizen asks whether this is the first tag and waits
-forever in a non-interactive shell.
-
-The tag must sit on the LAST commit of the release. `cz bump` tags whatever is
-current, so anything committed afterwards is simply not in the release - the
-first attempt here left a documentation fix outside the tag. Bump last, or
-move the tag.
-
-Order matters and is not negotiable:
-
-1. `push dev` - CI runs the verify chain.
-2. `push main` - CI runs verify plus the release gate.
-3. `push` the tag - builds, publishes through Trusted Publishing (OIDC), and
-   creates the GitHub release.
-
-Step 2 before step 3 on purpose: a green `main` means the tag will not
-surprise anyone, and if the gate catches something there is no tag to undo.
-
-Publishing happens on a `v*` tag and never on a branch push - PyPI rejects a
-re-upload of an existing version, so "publish on every push to main" would
-fail on the second push by construction. **A version number is burned
-forever** once used, even after deleting the release.
-
-Trusted Publishing must be configured on PyPI before the first tag, and its
-fields must match the workflow exactly: owner, repository, `release.yml`,
-environment `pypi`.
-
-## Task classification (which model does what)
-
-The project is solo and time is scarce, so work is split between a strong
-model and a cheaper one. The dividing line is NOT task size:
-
-> A task goes to the cheaper model when success is checkable by running a
-> command, AND the spec leaves no design decisions open.
-
-Everything else - anything where a wrong choice is expensive and CI would not
-catch it - stays with the strong model.
-
-| Cheaper model | Strong model |
-|---|---|
-| tests from an enumerated list of cases | producing that list |
-| filling in docstrings from placed templates | the human-in-the-loop contract, conceptual docs |
-| mechanical refactors from an explicit list (renames, parameter removal) | deciding what belongs on the list |
-| notebook boilerplate, formatting, lint fixes | calibration protocol, algorithm mechanisms, threshold methods, API shape |
-| - | reviewing what the cheaper model produced |
-
-Two consequences worth stating, because they are easy to get backwards:
-
-- **The cheaper model needs a STRICTER spec, not a looser one.** Part of the
-  strong model's work shifts from writing code to writing specs detailed
-  enough that the code becomes mechanical. `tmp/GIANT_HANDLING_TASK.md` is
-  written in that format on purpose.
-- **The safety net is the verify chain, not judgement.** Delegation is only
-  cheap because `pre-push` runs pyright and pytest with coverage
-  independently of what any agent reports about its own work. Never take
-  "all green" from an agent as evidence; the hook is the evidence.
-
-Neither model may bump the version or delete files (see Constraints).
-
-`requires-python = ">=3.14"`; the local toolchain runs Python 3.14 (`.python-version`).
 
 ## Architecture
 
 Package `src/intelliant/`, built with hatchling. Public API (`from intelliant import *`):
 
-| Class/Function | Module | Input -> Output |
+| Name | Module | Input -> Output |
 |---|---|---|
 | `GraphBuilder` | `.graph_builder` | embeddings -> CSR graph (KNN, exact/pynndescent) |
 | `PheromoneExtractor` | `.pheromone_extractor` | CSR graph -> pheromone field (ACO/MMAS) |
 | `CoreClusterer` | `.core_clusterer` | pheromone field + threshold -> labels + noise absorption |
 | `find_threshold`, `scan_thresholds` | `.threshold` | pheromones -> cutoff threshold (Otsu and others) |
+| `ThresholdResult`, `ScanRow` | `.threshold` | return types of the two functions above |
+| `GiantDiagnostics` | `.core_clusterer` | giant-component report attached to the clusterer |
 
 No unified pipeline: three classes called sequentially, each independently.
 
@@ -228,34 +97,59 @@ No unified pipeline: three classes called sequentially, each independently.
 
 - Docstrings and error messages in English, google-style. The conventions the
   linter cannot check - no types in docstrings, what belongs in `Raises`, how
-  to convert an autoDocstring template - are in [DOCSTRINGS.md](DOCSTRINGS.md).
+  to convert a generated template - are in [DOCSTRINGS.md](DOCSTRINGS.md).
 - `ValueError`: `"<name> must be <range>, got <value>"`.
 - Results are attributes with trailing underscore (sklearn convention): `graph_`, `pheromone_matrix_`, `labels_`.
 - Parameter validation via shared helpers in `src/intelliant/_validation.py`: `_check_int` (accepts `numbers.Integral`, rejects bool), `_check_float` (rejects bool/non-numeric with ValueError), `_check_bool` (bool / `np.bool_` only, normalized to plain bool). All public params go through them.
 - The staged pipeline is a feature (human-in-the-loop): intermediate state (`graph_`, `pheromone_matrix_`, `cores_`, `labels_pheromone_`, external `labels=`) is public API for user editing between stages. Validation stays per-stage; do not enforce cross-stage provenance or merge stages.
 - Source files: Python 3.14, ASCII only, no Cyrillic. ruff: line-length 120, double quotes. pyright: standard mode.
-- Commits: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, ...). commitizen configured; `version_files` auto-updates `pyproject.toml` and `src/intelliant/__init__.py`. Version bump only on explicit command. Commit-msg hook `cz check` rejects non-conventional messages.
+- Parameters that shape the result have NO defaults and are keyword-only.
+  Calibration is unfinished, so a default would be a value nobody justified,
+  applied silently. Do not add one back to make a call site shorter.
 
-## Constraints
+`requires-python = ">=3.14"`; the local toolchain runs Python 3.14 (`.python-version`).
 
-- Never delete files — list paths and commands, the user deletes themselves.
-- Never bump the version, tag, or push a tag on your own initiative.
-- Never use `--no-verify`. A hook that fails is reporting something; the fix
-  is the code, not the bypass.
-- Never report a check as passing without its output. "All green" is a claim.
-- Do not add files that pin the repository to one assistant — `CLAUDE.md`,
-  `.cursorrules`, `.mcp.json` and their kin are gitignored on purpose. This
-  file is the exception, because every agent reads it.
-- Do not touch `.env` or files with secrets.
-- Do not bump package version without an explicit command.
-- Coder edits only `src/intelliant/` unless told otherwise.
+## Task classification (which model does what)
+
+The maintainer's own setup, not a rule for outside contributors. The project
+is solo and time is scarce, so work is split between a strong model and a
+cheaper one. The dividing line is NOT task size:
+
+> A task goes to the cheaper model when success is checkable by running a
+> command, AND the spec leaves no design decisions open.
+
+Everything else - anything where a wrong choice is expensive and CI would not
+catch it - stays with the strong model.
+
+| Cheaper model | Strong model |
+|---|---|
+| tests from an enumerated list of cases | producing that list |
+| filling in docstrings from placed templates | the human-in-the-loop contract, conceptual docs |
+| mechanical refactors from an explicit list (renames, parameter removal) | deciding what belongs on the list |
+| notebook boilerplate, formatting, lint fixes | calibration protocol, algorithm mechanisms, threshold methods, API shape |
+| - | reviewing what the cheaper model produced |
+
+**If you do not know which column you are in, you are in the left one.** Take
+the task as specified, do not widen it, and raise anything that requires a
+design decision instead of deciding it.
+
+Two consequences worth stating, because they are easy to get backwards:
+
+- **The cheaper model needs a STRICTER spec, not a looser one.** Part of the
+  strong model's work shifts from writing code to writing specs detailed
+  enough that the code becomes mechanical.
+- **The safety net is the verify chain, not judgement.** Delegation is only
+  cheap because `pre-push` runs pyright and pytest with coverage
+  independently of what any agent reports about its own work. Never take
+  "all green" from an agent as evidence; the hook is the evidence.
 
 ## Notebooks workflow (user conventions, 2026-07-11)
 
 **Not in this repository yet.** `notebooks/` and its `utils/` helpers live
 outside it for now - the repository holds the library alone until the first
-release. The conventions below are the contract for when that work lands, so
-they are kept rather than rediscovered.
+release, and `utils/` is gitignored so that a stray `git add .` cannot pull it
+in. The conventions below are the contract for when that work lands, so they
+are kept rather than rediscovered.
 
 Division of labor: the agent writes jupytext `.py` scripts and converts
 them to `.ipynb`; the USER runs the notebooks. Runtime output is captured
@@ -305,7 +199,9 @@ Purpose taxonomy (keep in mind when designing runs):
 
 ## Workflow cycle (`tmp/TASK.md` <-> `tmp/REVIEW.md`)
 
-Both files are gitignored working state, not part of the repository.
+Both files are gitignored working state, not part of the repository. There are
+no templates in the repository either - if you have not been handed the file,
+ask for it rather than inventing a format.
 
 - `tmp/TASK.md` holds **only active items**, one stage at a time. Finished
   stages move out of it rather than accumulating.
