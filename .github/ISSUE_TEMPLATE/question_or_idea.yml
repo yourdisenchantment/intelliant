@@ -17,7 +17,8 @@ body:
       description: >
         For a result you cannot explain, include the parameters, the dataset
         shape and the metrics you got. For a proposal, say what problem it
-        solves - the roadmap is deliberately narrow until 1.0.
+        solves. Scope is deliberately narrow until 1.0: the library is one
+        clustering pipeline, not a framework.
     validations:
       required: true
 

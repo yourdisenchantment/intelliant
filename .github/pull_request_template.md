@@ -18,6 +18,6 @@ uv run pytest tests/ --cov
 
 - [ ] Targets `dev`, not `main`
 - [ ] Conventional Commits, one concern per commit
-- [ ] The "why" is in the commit body, not only in this description
-- [ ] No `Co-Authored-By` model trailers
+- [ ] The "why" is in the commit body as well as in this description
+- [ ] No `Co-Authored-By` or `Signed-off-by` trailers (the commit-msg hook rejects them)
 - [ ] No version bump (releases are maintainer-only)
