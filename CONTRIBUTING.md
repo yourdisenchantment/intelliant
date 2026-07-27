@@ -81,6 +81,13 @@ The hook validates the FORM. These rules cover the rest:
   models have worked on this repository and crediting one of them misstates
   authorship; the history records decisions, not tooling.
 
+## Docstrings
+
+Google style, Napoleon-compatible, enforced by `ruff --select D`. The rules a
+linter cannot check - no types in the docstring since every signature is
+annotated, what belongs in `Raises`, how to convert a generated template - are
+in [DOCSTRINGS.md](DOCSTRINGS.md).
+
 ## Pull requests
 
 Target `dev`. Before opening one, run the verify chain locally - CI runs the

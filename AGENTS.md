@@ -135,7 +135,9 @@ No unified pipeline: three classes called sequentially, each independently.
 
 ## Code style (repo-specific, not defaults)
 
-- Docstrings and error messages in English, google-style.
+- Docstrings and error messages in English, google-style. The conventions the
+  linter cannot check - no types in docstrings, what belongs in `Raises`, how
+  to convert an autoDocstring template - are in [DOCSTRINGS.md](DOCSTRINGS.md).
 - `ValueError`: `"<name> must be <range>, got <value>"`.
 - Results are attributes with trailing underscore (sklearn convention): `graph_`, `pheromone_matrix_`, `labels_`.
 - Parameter validation via shared helpers in `src/intelliant/_validation.py`: `_check_int` (accepts `numbers.Integral`, rejects bool), `_check_float` (rejects bool/non-numeric with ValueError), `_check_bool` (bool / `np.bool_` only, normalized to plain bool). All public params go through them.
