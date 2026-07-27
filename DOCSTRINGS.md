@@ -1,6 +1,18 @@
 # Docstring style
 
-Google style, Napoleon-compatible. The canonical references:
+Google style, Napoleon-compatible. Checked by
+
+```bash
+uv run ruff check --select D,DOC --preview src/
+```
+
+`D` (pydocstyle) covers form; `DOC` (pydoclint) checks that `Args`, `Returns`
+and `Raises` actually match the signature and body. `darglint` does the same
+job and is the usual recommendation, but its last release was October 2021 and
+the author has said they moved off Python - no reason to add an abandoned
+dependency for something the installed linter already does.
+
+The canonical references:
 
 - [Google Python Style Guide, section 3.8](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
 - [Napoleon example](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
@@ -78,8 +90,8 @@ value from the ACO literature transfers.
 ## Prose
 
 - English, as everywhere in this repository.
-- Wrap at 79 columns. Code may run to 120, but long prose is hard to read in
-  a terminal and in rendered docs.
+- Wrap prose at 79 columns; code stays at the configured 120. Prose does not
+  read the same as code at that width, in a terminal or in rendered docs.
 - First line: one sentence, imperative mood, ending with a period.
   `"""Builds the similarity graph."""` - not `"""Build..."""`, not
   `"""This function builds..."""`.

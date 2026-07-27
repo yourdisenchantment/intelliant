@@ -131,14 +131,6 @@ def _update_edges(
     cols: np.ndarray,
     vals: np.ndarray,
 ) -> int:
-    """Adds deposits in place; returns how many fell on edges that do not exist.
-
-    An ant stepping i -> j deposits on both (i, j) and (j, i). On an
-    asymmetric graph the reverse edge is not stored, and that half of the
-    deposit has nowhere to go. Counting the misses here is free - the lookup
-    happens anyway - and it measures the actual damage rather than checking
-    symmetry up front, which would cost an O(nnz) allocation on every fit.
-    """
 
     missed = 0
     for k in range(len(rows)):
