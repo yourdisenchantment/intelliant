@@ -197,18 +197,32 @@ Versions follow project MILESTONES rather than commit types, so the number is
 passed explicitly:
 
 ```bash
-uv run cz bump --yes 0.2.0a1
-uv lock                       # the lock carries the project version too
-git add uv.lock && git commit --amend --no-edit
+uv run cz bump --yes --files-only 1.0.0a1   # rewrite the version files, nothing else
+uv lock                                     # the lock carries the project version too
+git add -A
+git commit -m "bump: version 0.2.0a1 -> 1.0.0a1"
+git tag -a v1.0.0a1 -m "Release 1.0.0a1"
 ```
 
 `uv.lock` records the version of this project alongside its dependencies, so
 a bump leaves it stale. Left that way, CI fails immediately: `uv sync
---frozen` refuses a lock that disagrees with `pyproject.toml`, and by then the
-tag exists. Re-lock and fold it into the bump commit.
+--frozen` refuses a lock that disagrees with `pyproject.toml`.
+
+**`--files-only`, and the commit and tag made by hand, is the point of this
+recipe.** A plain `cz bump` also commits and tags, which forces the re-lock to
+arrive as `git commit --amend` - and an amend builds a new commit object,
+leaving the tag on the old one, which is no longer on any branch. The release
+then points at a commit nobody can reach. Rewriting the files first and
+committing once puts the tag on the final commit by construction, instead of
+requiring it to be moved afterwards and remembered.
 
 `--yes` because without it commitizen asks whether this is the first tag and
 waits forever in a non-interactive shell.
+
+Pass the version explicitly and in full - `1.0.0a1`, never `1.0.0a`. PEP 440
+reads a missing pre-release number as zero, so `1.0.0a` becomes `1.0.0a0` in
+the built artifact while the tag stays `v1.0.0a`, and the two no longer name
+the same thing.
 
 `cz bump` rewrites the version in `pyproject.toml`, `src/intelliant/__init__.py`
 and `CITATION.cff` - they are its `version_files`. Do not edit any of the
@@ -216,10 +230,18 @@ three by hand; the release gate on `main` fails if they disagree, which is
 what stops a release from shipping one number, reporting another and handing
 out a citation for a third.
 
-The tag must sit on the LAST commit of the release. `cz bump` tags whatever is
-current, so anything committed afterwards is simply not in the release - the
-first attempt here left a documentation fix outside the tag. Bump last, or
-move the tag.
+Bump last. The tag must sit on the final commit of the release, so anything
+committed after it is simply not in the release - the first attempt here left
+a documentation fix outside the tag. If something does have to land
+afterwards, move the tag rather than accepting the gap, and keep it annotated:
+
+```bash
+git tag -f -a v1.0.0a1 <commit> -m "$(git tag -l --format='%(contents)' v1.0.0a1)"
+```
+
+That is safe only before the tag is pushed. Once a tag reaches GitHub the
+release ruleset refuses to move or delete it, and rightly so: it names a
+version number that PyPI has burned forever.
 
 Pushing the resulting `v*` tag triggers the release workflow, which builds and
 publishes to PyPI through Trusted Publishing (OIDC - no API tokens exist in
