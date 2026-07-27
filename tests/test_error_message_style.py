@@ -357,6 +357,26 @@ CASES = [
         "evaporation_rate must be in range [0, 1], got 1.5",
     ),
     (
+        "thr_bins_one",
+        lambda g, pm: find_threshold(np.array([0.1, 0.5, 0.9]), method="otsu", bins=1),
+        "bins must be int >= 2, got 1",
+    ),
+    (
+        "thr_otsu_bins_one_direct",
+        lambda g, pm: threshold_otsu(np.array([0.1, 0.5, 0.9]), bins=1),
+        "bins must be >= 2 for otsu",
+    ),
+    (
+        "thr_percentile_bool",
+        lambda g, pm: find_threshold(np.array([0.1, 0.5, 0.9]), method="percentile", percentile=True),
+        "percentile must be a number, got True",
+    ),
+    (
+        "thr_percentile_empty",
+        lambda g, pm: threshold_percentile(np.array([]), 50.0),
+        "data is empty",
+    ),
+    (
         "pe_evaporation_schedule_unknown",
         lambda g, pm: make_extractor(evaporation_schedule="per-ant", verbose=False),
         "evaporation_schedule must be one of {'step', 'iteration'}",
@@ -751,7 +771,7 @@ CASES = [
     (
         "thr_find_bins_0",
         lambda g, pm: find_threshold(np.array([1.0, 2.0, 3.0]), bins=0),
-        "bins must be int >= 1, got 0",
+        "bins must be int >= 2, got 0",
     ),
     (
         "thr_scan_empty",

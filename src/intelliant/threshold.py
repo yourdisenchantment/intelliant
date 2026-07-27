@@ -26,6 +26,12 @@ class ScanRow(NamedTuple):
 def threshold_otsu(data: np.ndarray, bins: int = 100) -> ThresholdResult:
     if data.size == 0:
         raise ValueError("data is empty: cannot compute a threshold on an empty array")
+    # Otsu splits the histogram in two, so one bin leaves nothing to split:
+    # variance_between is built from weight1[:-1] and comes out empty, and
+    # np.argmax then fails with a message about numpy internals rather than
+    # about the caller's argument.
+    if bins < 2:
+        raise ValueError(f"bins must be >= 2 for otsu (a single bin cannot be split), got {bins}")
     counts, bin_edges = np.histogram(data, bins=bins)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
@@ -44,8 +50,13 @@ def threshold_otsu(data: np.ndarray, bins: int = 100) -> ThresholdResult:
 
 
 def threshold_percentile(data: np.ndarray, percentile: float) -> ThresholdResult:
-    if not 0.0 <= percentile <= 100.0:
-        raise ValueError(f"percentile must be in range [0, 100], got {percentile}")
+    if data.size == 0:
+        raise ValueError("data is empty: cannot compute a threshold on an empty array")
+    # Through _check_float rather than a bare range test: the range test
+    # accepts True, which numpy then reads as the 1st percentile. Rejecting
+    # bool is the reason the helper exists, and every other float parameter
+    # in this module already goes through it.
+    percentile = _check_float("percentile", percentile, 0.0, 100.0)
     value = float(np.percentile(data, percentile))
     return ThresholdResult(value=value, percentile=float(percentile))
 
@@ -70,7 +81,7 @@ def find_threshold(
     if not np.isfinite(data).all():
         raise ValueError("data contains NaN or inf: clean the values before computing a threshold")
     k = _check_float("k", k, min_val=float("-inf"))
-    bins = _check_int("bins", bins, 1)
+    bins = _check_int("bins", bins, 2)
     if method == "otsu":
         return threshold_otsu(data, bins=bins)
     if method == "percentile":

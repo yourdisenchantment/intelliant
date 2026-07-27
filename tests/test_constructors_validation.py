@@ -343,9 +343,9 @@ def test_find_threshold_validation():
         find_threshold(data, method="stat", k=float("nan"))
     with pytest.raises(ValueError, match="k must be a number"):
         find_threshold(data, method="stat", k="1")
-    with pytest.raises(ValueError, match="bins must be int >= 1"):
+    with pytest.raises(ValueError, match="bins must be int >= 2"):
         find_threshold(data, method="otsu", bins=0)
-    with pytest.raises(ValueError, match="bins must be int >= 1"):
+    with pytest.raises(ValueError, match="bins must be int >= 2"):
         find_threshold(data, method="otsu", bins=1.5)
 
     # Negative k is legitimate: mean + k*std with k < 0 lowers the threshold.
