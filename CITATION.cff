@@ -3,7 +3,9 @@ title: "intelliant: clustering by ant colony optimization on a k-nearest-neighbo
 message: "If you use this software in research, please cite it as below."
 type: software
 authors:
-  - alias: yourdisenchantment
+  - family-names: Mikheyev
+    given-names: Pavel
+    alias: yourdisenchantment
 repository-code: "https://github.com/yourdisenchantment/intelliant"
 url: "https://pypi.org/project/intelliant/"
 abstract: >-
