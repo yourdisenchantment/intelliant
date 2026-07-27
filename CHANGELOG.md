@@ -82,7 +82,7 @@ existing code** - see below before installing.
 Published from the previous repository. Three-class architecture, 306 tests,
 `py.typed` shipped. No docstrings.
 
-## [0.1.0a1]
+## [0.1.0a1] - 2026-06-15
 
 First published alpha.
 

@@ -5,6 +5,7 @@ type: software
 authors:
   - family-names: Mikheyev
     given-names: Pavel
+    orcid: "https://orcid.org/0009-0007-8644-0558"
     alias: yourdisenchantment
 repository-code: "https://github.com/yourdisenchantment/intelliant"
 url: "https://pypi.org/project/intelliant/"
