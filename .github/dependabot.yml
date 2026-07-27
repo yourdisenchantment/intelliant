@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  # Action majors move faster than anyone's memory: checkout and
+  # upload-artifact are on v7 while v4 still feels current. Left alone, the
+  # workflows quietly drift onto unsupported runners.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+    commit-message:
+      prefix: chore
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # `uv` rather than `pip` - a separate ecosystem, and the one that reads
+  # uv.lock. Under `pip` the lock file would never be updated.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+    commit-message:
+      prefix: chore
+    # One pull request per week instead of a dozen. A solo project cannot
+    # review them individually, and unreviewed dependency bumps are worse
+    # than late ones.
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    # Majors arrive on their own, because they are the ones that break things
+    # and deserve to be looked at rather than batched.
+    open-pull-requests-limit: 5
