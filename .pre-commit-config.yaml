@@ -62,7 +62,7 @@ repos:
         entry: '(?i)^\s*(co-authored-by|signed-off-by)\s*:'
         stages: [ commit-msg ]
 
-      # Verify chain (AGENTS.md "Pre-report order"): ruff runs per-commit
+      # Verify chain (CONTRIBUTING.md "The verify chain"): ruff runs per-commit
       # above; pyright and pytest run on push - too slow per commit, and a
       # skipped hook is worse than a slow one.
       - id: pyright

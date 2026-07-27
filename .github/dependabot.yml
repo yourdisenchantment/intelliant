@@ -24,13 +24,14 @@ updates:
     target-branch: dev
     commit-message:
       prefix: chore
-    # One pull request per week instead of a dozen. A solo project cannot
-    # review them individually, and unreviewed dependency bumps are worse
-    # than late ones.
+    # Minors and patches arrive as ONE grouped pull request instead of a
+    # dozen. A solo project cannot review them individually, and unreviewed
+    # dependency bumps are worse than late ones.
     groups:
       python-dependencies:
         patterns: ["*"]
         update-types: [minor, patch]
-    # Majors arrive on their own, because they are the ones that break things
-    # and deserve to be looked at rather than batched.
+    # Majors are not grouped: they are the ones that break things and deserve
+    # to be looked at rather than batched. The cap is what a solo maintainer
+    # can actually read in a sitting - one grouped PR plus a few majors.
     open-pull-requests-limit: 5
