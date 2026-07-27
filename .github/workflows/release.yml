@@ -1,0 +1,105 @@
+name: Release
+
+# Publishing is triggered by a tag, never by a push to a branch. PyPI rejects
+# a re-upload of an existing version, so "publish on every push to main" would
+# fail on the second push by construction.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      # A tag that disagrees with pyproject would publish the wrong version
+      # under the right name, which cannot be undone - PyPI never releases a
+      # version number back, even after deletion.
+      - name: Tag must match the project version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(uv run python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$tag project=$version"
+          test "$tag" = "$version"
+
+      - name: Run the verify chain
+        run: |
+          uv sync --all-groups --all-extras --frozen
+          uv run ruff check src/ tests/ utils/
+          uv run pyright src/intelliant
+          uv run pytest tests/ --cov
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: distributions
+          path: dist/
+
+  publish:
+    name: publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Trusted Publishing: PyPI trusts this repository, workflow and
+    # environment through OIDC. No API token exists in this repository.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/intelliant/
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: distributions
+          path: dist/
+
+      # release/v1 rather than a pinned tag: this is the channel PyPA
+      # maintains and patches, and a stale pin here fails at the worst moment.
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: create the GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: distributions
+          path: dist/
+
+      # Prereleases (1.0.0a1, 1.0.0b1) are marked as such so that "latest"
+      # keeps pointing at the last stable version.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in
+            *a*|*b*|*rc*) prerelease="--prerelease" ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes $prerelease

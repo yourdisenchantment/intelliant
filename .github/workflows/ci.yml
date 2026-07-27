@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+# A new push to the same branch or PR makes the previous run pointless.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      # Python version comes from .python-version; no separate setup-python.
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras --frozen
+
+      - name: Lint
+        run: uv run ruff check src/ tests/ utils/
+
+      - name: Format
+        run: uv run ruff format --check src/ tests/ utils/
+
+      - name: Types
+        run: uv run pyright src/intelliant
+
+      # Coverage threshold (fail_under) lives in pyproject, not here, so the
+      # local run and CI cannot disagree about it.
+      - name: Tests
+        run: uv run pytest tests/ --cov
