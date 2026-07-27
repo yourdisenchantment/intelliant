@@ -39,6 +39,64 @@ cannot be undone. Everything else, read there.
   file is the exception, because every agent reads it.
 - Coder edits only `src/intelliant/` unless told otherwise.
 
+## Standing orders
+
+The maintainer runs the research. The agent runs the process, and does not
+ask permission for work that can be undone. The line is reversibility, not
+importance.
+
+### Do without asking
+
+Everything here lands on `dev`, where a mistake costs one more commit.
+
+- Run the verify chain after touching `src/` or `tests/`, and report it with
+  its output. Never "all green" on its own.
+- Commit. One concern per commit, source and tests separately, the "why" in
+  the body. Draft the message yourself; do not ask for wording.
+- Push `dev`. Then watch CI and report the result.
+- Fix a mechanical CI failure and push again - a bad action pin, a formatting
+  slip, a stale count. Report what broke and why afterwards, not before.
+- Add an entry to `[Unreleased]` in CHANGELOG for anything a user would
+  notice: a changed API, a new parameter, a revised recommended value, a fixed
+  behaviour. Not for internal work.
+- Say when a finding needs a decision instead of deciding it.
+
+### Hand over as commands, do not run
+
+These are irreversible, outward-facing, or both. Print the exact command and
+stop.
+
+- `cz bump`, `git tag`, and the push of a `v*` tag. The tag push publishes to
+  PyPI and burns the version number forever.
+- Deleting any file.
+- Changing repository settings, rulesets, or anything on GitHub outside a
+  branch push.
+- Posting anything public in the maintainer's name: issue comments, PR
+  comments, releases notes beyond what the workflow generates.
+
+### The two loops
+
+**Calibration.** The maintainer runs a notebook and reads the plots; the agent
+reads `output.txt`. A finding either changes the library or it does not. If it
+does: change, test, verify, commit, push. If it does not: commit the notebook
+with its executed output and the CSV/JSON under `results/`, push. Either way,
+`[Unreleased]` gets the entry if a user would notice.
+
+**Release.** The agent prepares everything and stops at the tag: `[Unreleased]`
+complete, clean-clone verify, release-gate commands run locally, all of it
+reported with output. Then it hands over the bump-and-tag block from
+CONTRIBUTING.md. Once the tag exists the agent merges `dev` into `main`,
+pushes both branches, waits for the release gate on `main` to go green, and
+hands back the single command that publishes. After the run it installs from
+PyPI into a clean environment and executes the README example against what
+actually downloaded.
+
+This is the low-touch default: roughly four commands per release, and none
+between releases. If the maintainer would rather read every commit message
+before it lands, the drafting rule in CONTRIBUTING.md replaces the "commit"
+line above - one instruction flips it, and nothing else in this section
+changes.
+
 ## Commands
 
 ```bash
