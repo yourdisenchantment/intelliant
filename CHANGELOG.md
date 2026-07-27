@@ -9,7 +9,7 @@ they are passed explicitly at release time. See CONTRIBUTING.md.
 
 ## [Unreleased]
 
-## [0.2.0a1]
+## [0.2.0a1] - 2026-07-27
 
 First release from the rebuilt repository. **Upgrading from `0.1.0a2` breaks
 existing code** - see below before installing.
