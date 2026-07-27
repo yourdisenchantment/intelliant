@@ -97,6 +97,65 @@ before it lands, the drafting rule in CONTRIBUTING.md replaces the "commit"
 line above - one instruction flips it, and nothing else in this section
 changes.
 
+## When something breaks
+
+Every entry below actually happened while publishing `0.2.0a1`. Fix it and
+report what you did afterwards - none of these need a decision, and asking
+about them is the interruption this section exists to prevent.
+
+**pre-commit refuses: "Your pre-commit configuration is unstaged."**
+It reads its config from the index, not the working tree. Commit
+`.pre-commit-config.yaml` on its own first, then the rest.
+
+**A push is rejected but the ref looks fine.**
+Read the whole output, not the tail. A failed hook prints above the push error
+and is easy to mistake for a remote rejection.
+
+**A hook blocks a legitimate push.**
+Check which stage it ran at. `no-commit-to-branch` inspects the CURRENT branch
+rather than the ref being pushed - it is now restricted to `pre-commit` for
+exactly that reason, so do not widen it again. Never reach for `--no-verify`;
+push both refs from `dev` instead.
+
+**CI fails on `uv sync --frozen` right after a version bump.**
+`uv.lock` records this project's own version. Re-lock and fold it into the
+bump commit - see the `--files-only` recipe in CONTRIBUTING.md. Doing it in a
+later commit leaves the tag pointing at a broken tree.
+
+**The tag is not on the last commit.**
+`git commit --amend` after a bump builds a new commit and strands the tag on
+the old one. Move the tag, keeping it annotated. Only possible before the
+push: the ruleset refuses to move or delete a pushed `v*` tag.
+
+**A workflow fails in seconds without running a single check.**
+An action pin does not resolve. Verify every `uses:` with
+`git ls-remote --tags`; a floating major tag may not exist even when the
+release does, which is what `setup-uv@v9` turned out to be.
+
+**Tests pass locally and fail on a clean clone.**
+Something is untracked. This is why a release is verified in a fresh clone
+with `--frozen` rather than in the working folder.
+
+**`cz bump` hangs.**
+Missing `--yes`; it is waiting on "is this the first tag?" forever.
+
+**Dependabot proposes a downgrade.**
+A dependency has no lower bound, so the resolver has no floor. Fix the bound
+in `[project.dependencies]` - the pull request is the symptom.
+
+**Coverage looks implausibly low.**
+numba `@njit` bodies are invisible to the tracer and already excluded. Do not
+lower `fail_under` to make a number agree.
+
+### When to interrupt anyway
+
+Three cases, and only these:
+
+- the fix requires a research or design decision;
+- the action is irreversible - anything from the hand-over list;
+- the same failure returns after a fix, which means the diagnosis was wrong
+  and guessing again wastes more than asking.
+
 ## Commands
 
 ```bash
