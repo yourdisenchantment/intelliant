@@ -83,8 +83,15 @@ target-version = "py314"
 # NPY: numpy-specific rules (legacy seeding, deprecated aliases).
 # PT: pytest style - keeps the growing suite uniform.
 # ANN: every signature carries its types.
-# D (pydocstyle, google) is deliberately NOT enabled yet: docstrings are
-# stripped until ROADMAP 0.4; turn it on when that phase starts.
+# D: docstring form, google convention. Conventions the linter cannot check
+#    are in DOCSTRINGS.md.
+#
+# DOC (pydoclint) verifies that Args/Returns/Raises match the signature and
+# body, and it is worth running - `ruff check --select DOC --preview src/`.
+# Not enabled here for two reasons: it is preview-only, and turning on preview
+# mode enables every other experimental rule with it; and DOC502 reports three
+# false positives in this code, where a function raises ValueError through
+# `_check_int` or through a method it calls rather than with a literal raise.
 #
 # Deliberately NOT enabled, each measured against this code first:
 #   C90  - flags fit (20) and the njit kernel _step_ants (19). Splitting an
@@ -94,14 +101,20 @@ target-version = "py314"
 #          constructor parameters exist precisely because defaults were
 #          removed.
 #   N    - all 7 hits are `X`, the sklearn convention for a feature matrix.
-select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT", "ANN"]
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT", "ANN", "D"]
+
+[tool.ruff.lint.pydocstyle]
+# Without this the whole D set is on, which pulls in rules that contradict
+# each other (D203 against D211, D212 against D213) and rules Google style
+# does not ask for. Naming the convention resolves both.
+convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "notebooks/**" = ["E402"]
 # Tests are outside pyright's include (they pass invalid types on purpose, to
 # exercise validation), so annotations there would be checked by nobody -
 # 324 lines of decoration rather than a stricter contract.
-"tests/**" = ["ANN"]
+"tests/**" = ["ANN", "D"]
 
 [tool.ruff.format]
 quote-style = "double"

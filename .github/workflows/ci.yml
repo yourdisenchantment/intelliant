@@ -70,10 +70,12 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups --all-extras --frozen
 
-      # TODO: enable once the docstrings land (plan phase 3). Turning it on
-      # earlier makes main red by construction, since the sources carry none.
-      # - name: Docstrings
-      #   run: uv run ruff check --select D --config 'lint.pydocstyle.convention = "google"' src/
+      # Beyond the D rules that run on every branch: DOC verifies that
+      # Args/Returns/Raises actually match the signature and body. Preview-only,
+      # so it is not in the pyproject select list; DOC502 is skipped because it
+      # reports a function raising through a helper as an extraneous exception.
+      - name: Docstring contract
+        run: uv run ruff check --select DOC --ignore DOC502 --preview src/
 
       # Excluded from the default run by a marker, so nothing else would ever
       # execute it; on a library whose selling point is scale, an unrun scale

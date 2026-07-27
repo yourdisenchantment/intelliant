@@ -1,4 +1,16 @@
 # src/intelliant/pheromone_extractor.py
+"""Stage 2: run the colony over the graph and read off the pheromone field.
+
+Ants start at random vertices and walk, choosing each step by pheromone times
+edge weight, depositing as they go. Dense regions get walked more often and
+accumulate; sparse ones do not. The result is not a partition - it is a field
+whose distribution the next stage cuts.
+
+Unlike ACO for the travelling salesman, a walk here is not a solution and
+there is no objective function. Nothing is optimised; the field is simply
+where the ants have been. That difference is why parameter values from the
+ACO literature do not transfer, most sharply for `evaporation_schedule`.
+"""
 
 import warnings
 from time import perf_counter
@@ -34,6 +46,39 @@ def _step_ants(
     elite_multiplier: float,
     rng_states: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Advance every live ant by one step and collect the deposits.
+
+    Compiled, and written as explicit loops rather than array operations
+    because numba is faster that way and this is the hot path.
+
+    An ant dies when it reaches a vertex with no edges, or when every
+    available move has effectively zero probability - which happens when the
+    only way back is banned by `use_no_return`. Dead ants are skipped for the
+    rest of the iteration.
+
+    Args:
+        indptr: CSR row pointers of the graph.
+        indices: CSR column indices, sorted within each row.
+        pheromone_data: Current pheromone per edge, modified by the caller.
+        weight_data: Edge weights already raised to `beta`.
+        density: Per-vertex density factors, empty when unused.
+        current_nodes: Where each ant stands. Updated in place.
+        prev_nodes: Where each ant came from, -1 at the start. Updated in
+            place.
+        is_elite: Which ants take the greedy move and deposit more.
+        alive: Which ants can still move. Updated in place.
+        alpha: Exponent on pheromone. Above 1 sharpens the field toward what
+            is already strong.
+        use_no_return: Whether stepping straight back is forbidden.
+        use_density: Whether to weight moves by vertex density.
+        pheromone_deposit: Base deposit per traversed edge.
+        elite_multiplier: Multiplier applied to elite deposits.
+        rng_states: One uniform random draw per ant for this step.
+
+    Returns:
+        `(rows, cols, values)` for the deposits of this step, both directions
+        of each traversed edge.
+    """
     n_ants = len(current_nodes)
 
     delta_rows = np.empty(n_ants * 2, dtype=np.intp)
@@ -131,7 +176,28 @@ def _update_edges(
     cols: np.ndarray,
     vals: np.ndarray,
 ) -> int:
+    """Add deposits to the matrix in place, and count those that miss.
 
+    Each target is found by binary search within its CSR row, which is why
+    `sort_indices` is called before the run.
+
+    An ant stepping i -> j deposits on both (i, j) and (j, i). On an
+    asymmetric graph the reverse edge is not stored and that half has nowhere
+    to go. Counting the misses is free - the lookup happens anyway - and it
+    measures the actual damage rather than checking symmetry up front, which
+    would cost an O(nnz) allocation on every fit.
+
+    Args:
+        indptr: CSR row pointers.
+        col_indices: CSR column indices, sorted within each row.
+        data: Pheromone values, modified in place.
+        rows: Target rows.
+        cols: Target columns.
+        vals: Amounts to add.
+
+    Returns:
+        How many deposits fell on edges that do not exist.
+    """
     missed = 0
     for k in range(len(rows)):
         r = rows[k]
@@ -157,6 +223,31 @@ def _update_edges(
 
 
 class PheromoneExtractor:
+    """Run an ant colony over a graph and produce a pheromone field.
+
+    Attributes:
+        pheromone_matrix_: The field after `fit` - the same sparsity pattern
+            as the input graph, with pheromone instead of similarity. Public
+            and meant to be cut several ways; see `find_threshold` and
+            `scan_thresholds`.
+
+    Example:
+        >>> aco = PheromoneExtractor(
+        ...     n_ants=len(X),
+        ...     n_iterations=20,
+        ...     path_length=10,
+        ...     beta=2.0,
+        ...     alpha=1.0,
+        ...     evaporation_rate=0.07,
+        ...     evaporation_schedule="step",
+        ...     pheromone_deposit=1.0,
+        ...     initial_pheromone=1.0,
+        ...     tau_min=0.01,
+        ...     tau_max=10.0,
+        ... )
+        >>> aco.fit(graph)  # doctest: +SKIP
+    """
+
     def __init__(
         self,
         *,
@@ -182,6 +273,66 @@ class PheromoneExtractor:
         warmup: bool = True,
         verbose: bool = True,
     ) -> None:
+        """Configure the colony.
+
+        Args:
+            n_iterations: Colony runs. Each starts the ants afresh at random
+                vertices; the field carries over.
+            path_length: Steps per ant per iteration. Under the `"step"`
+                schedule this also scales the effective decay - see
+                `evaporation_schedule`.
+            beta: Exponent on edge weight. Raises the pull of similarity
+                against pheromone.
+            alpha: Exponent on pheromone. Above 1 sharpens the field toward
+                what is already strong, which converges sooner and commits
+                to boundaries sooner.
+            evaporation_rate: Fraction removed per decay event, in [0, 1].
+                What "event" means depends on the schedule.
+            evaporation_schedule: `"step"` decays once per ant step, so the
+                effective per-iteration decay is
+                `1 - (1 - rate) ** path_length` - 0.516 at rate 0.07 with
+                path_length 10, and the tail of a walk outweighs its start.
+                `"iteration"` decays once before the ants move, as Ant System
+                and MMAS do. **No value from the ACO literature transfers to**
+                **`"step"`.**
+            pheromone_deposit: Added per traversed edge, both directions.
+            initial_pheromone: Starting value on every edge.
+            tau_min: Lower clamp, applied once per iteration. Keeps an edge
+                from reaching zero and becoming permanently unreachable.
+            tau_max: Upper clamp. Bounds runaway reinforcement - the MMAS
+                idea.
+            n_ants: Ants per iteration. Required by `fit`; the production
+                recipe is one per point.
+            use_node_density: Whether to bias moves toward high-degree
+                vertices.
+            node_density_gamma: Exponent on density. Required when the flag
+                is on.
+            use_elite_ants: Whether some ants take the greedy move and
+                deposit more.
+            elite_ratio: Share of ants that are elite. Required when the flag
+                is on.
+            elite_multiplier: Deposit multiplier for elite ants. Required
+                when the flag is on.
+            elite_start_iteration: Iteration from which elites activate.
+                Required when the flag is on - delaying them lets the field
+                form before anything sharpens it.
+            use_no_return: Whether an ant may step straight back where it
+                came from.
+            random_state: Seed for ant placement and choices.
+            warmup: Whether to compile the kernels on a toy graph first, so
+                the first iteration is not dominated by compilation.
+            verbose: Whether to report progress and timings.
+
+        Raises:
+            ValueError: If any argument is outside its valid range or of the
+                wrong type, if `tau_min` is not below `tau_max`, if
+                `evaporation_schedule` is not one of the two, or if a
+                heuristic parameter is missing while its flag is on.
+
+        Warns:
+            UserWarning: If `elite_start_iteration` is at or beyond
+                `n_iterations`, which means elites never activate.
+        """
         self.n_ants = _check_int("n_ants", n_ants, 1, allow_none=True)
 
         self.n_iterations = _check_int("n_iterations", n_iterations, 0)
@@ -280,10 +431,16 @@ class PheromoneExtractor:
         self._rng = np.random.default_rng(random_state)
 
     def _log(self, msg: str) -> None:
+        """Write a progress message when verbose, via tqdm to avoid clobbering bars."""
         if self.verbose:
             tqdm.write(msg)
 
     def _warmup(self) -> None:
+        """Compile the kernels on a toy graph before the real run.
+
+        numba compiles on first call, so without this the first iteration
+        carries the compilation cost and every timing above it is misleading.
+        """
         indptr = np.array([0, 1, 2, 3], dtype=np.intp)
         indices = np.array([1, 2, 0], dtype=np.intp)
         pheromone_data = np.ones(3, dtype=np.float64)
@@ -315,6 +472,33 @@ class PheromoneExtractor:
         _update_edges(indptr, indices, pheromone_data, rows, cols, vals)
 
     def fit(self, graph: csr_matrix) -> Self:
+        """Run the colony over the graph.
+
+        The input is copied and canonicalised - duplicates summed, explicit
+        zeros dropped, indices sorted - so the caller's matrix is left alone
+        and the binary search in the update kernel is valid.
+
+        Args:
+            graph: A square, symmetric similarity graph with finite,
+                non-negative weights. `GraphBuilder` produces one; a
+                hand-built graph must be symmetric, or half of every deposit
+                is discarded.
+
+        Returns:
+            The instance, so the call can be chained. The field itself is in
+            `pheromone_matrix_`.
+
+        Raises:
+            ValueError: If `n_ants` is unset or not positive, if the graph is
+                not square, empty, edgeless, holds NaN or inf or negative
+                weights, or if a heuristic parameter is missing while its flag
+                is on.
+
+        Warns:
+            UserWarning: If deposits landed on edges absent from the graph -
+                it is not symmetric - or if `elite_ratio` rounds to zero elite
+                ants.
+        """
         if self.n_ants is None:
             raise ValueError("n_ants is required: set it explicitly, e.g. n_ants=len(X) to start")
         # Not dead code, though it looks it: the constructor already enforces
@@ -444,6 +628,15 @@ class PheromoneExtractor:
         return self
 
     def _run_iteration(self, is_elite: np.ndarray) -> int:
+        """Place the ants and walk them `path_length` steps.
+
+        Args:
+            is_elite: Which ants take the greedy move this iteration. All
+                False before `elite_start_iteration`.
+
+        Returns:
+            Deposits that fell on edges missing from the graph.
+        """
         assert self.pheromone_matrix_ is not None
         assert self.pheromone_matrix_.data is not None
         assert self._graph is not None
@@ -505,6 +698,12 @@ class PheromoneExtractor:
         return missed
 
     def _clamp_pheromones(self) -> None:
+        """Clamp the field into [tau_min, tau_max].
+
+        Once per iteration rather than per step - a deliberate trade. Values
+        may briefly leave the range within an iteration; clamping on every
+        step would cost a full pass over the matrix `path_length` times over.
+        """
         assert self.pheromone_matrix_ is not None
         assert self.pheromone_matrix_.data is not None
 
