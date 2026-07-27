@@ -123,6 +123,11 @@ tag exists. Re-lock and fold it into the bump commit.
 `--yes` because without it commitizen asks whether this is the first tag and
 waits forever in a non-interactive shell.
 
+The tag must sit on the LAST commit of the release. `cz bump` tags whatever is
+current, so anything committed afterwards is simply not in the release - the
+first attempt here left a documentation fix outside the tag. Bump last, or
+move the tag.
+
 Pushing the resulting `v*` tag triggers the release workflow, which builds and
 publishes to PyPI through Trusted Publishing (OIDC - no API tokens exist in
 this repository). Pushes to `main` and `dev` only run checks; they never

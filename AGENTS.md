@@ -145,6 +145,11 @@ that disagrees with `pyproject.toml` - after the tag already exists. And
 without `--yes`, commitizen asks whether this is the first tag and waits
 forever in a non-interactive shell.
 
+The tag must sit on the LAST commit of the release. `cz bump` tags whatever is
+current, so anything committed afterwards is simply not in the release - the
+first attempt here left a documentation fix outside the tag. Bump last, or
+move the tag.
+
 Order matters and is not negotiable:
 
 1. `push dev` - CI runs the verify chain.
