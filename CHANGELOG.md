@@ -9,6 +9,15 @@ they are passed explicitly at release time. See CONTRIBUTING.md.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Runtime dependencies now declare lower bounds.** `0.2.0a1` shipped with
+  none at all, so a resolver was free to hand a user a numba, scipy or
+  scikit-learn far older than anything this code was written against - and
+  `numba` in particular changes `@njit` behaviour across that distance. The
+  floors are the versions the test suite runs on. No upper bounds: those break
+  downstream resolution, and CI is the mechanism for catching breakage.
+
 ## [0.2.0a1] - 2026-07-27
 
 First release from the rebuilt repository. **Upgrading from `0.1.0a2` breaks

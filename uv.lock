@@ -1005,12 +1005,12 @@ notebooks = [
 
 [package.metadata]
 requires-dist = [
-    { name = "numba" },
-    { name = "numpy" },
-    { name = "pynndescent" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "tqdm" },
+    { name = "numba", specifier = ">=0.66.0" },
+    { name = "numpy", specifier = ">=2.4.6" },
+    { name = "pynndescent", specifier = ">=0.6.0" },
+    { name = "scikit-learn", specifier = ">=1.9.0" },
+    { name = "scipy", specifier = ">=1.18.0" },
+    { name = "tqdm", specifier = ">=4.70.0" },
 ]
 
 [package.metadata.requires-dev]
