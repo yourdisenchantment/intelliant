@@ -1,0 +1,53 @@
+name: Bug report
+description: Something behaves differently from what the docs or the API promise
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The library is an early alpha and the public API still changes between
+        versions. Please check the version first - the behaviour may already
+        have changed on purpose.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: >
+        The smallest script that shows it. Include the parameters you passed -
+        every calibratable parameter is required in this library precisely
+        because a default would hide which value was in play.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or output
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: intelliant version
+      placeholder: "0.1.0a2"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Python and OS
+      placeholder: "Python 3.14.6, macOS 15"
+    validations:
+      required: true

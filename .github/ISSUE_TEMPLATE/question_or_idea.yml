@@ -1,0 +1,28 @@
+name: Question or idea
+description: Usage question, a result you cannot explain, or a proposal
+labels: ["question"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions about clustering results are welcome and useful - how the
+        algorithm behaves on real data is exactly what is being calibrated
+        right now.
+
+  - type: textarea
+    id: body
+    attributes:
+      label: Question or idea
+      description: >
+        For a result you cannot explain, include the parameters, the dataset
+        shape and the metrics you got. For a proposal, say what problem it
+        solves - the roadmap is deliberately narrow until 1.0.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything already tried
+      description: Optional, but it saves a round trip.
