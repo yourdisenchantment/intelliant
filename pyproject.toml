@@ -164,6 +164,10 @@ version = "0.2.0a1"
 version_files = [
     "pyproject.toml:version",
     "src/intelliant/__init__.py:__version__",
+    # CITATION.cff carries the version too, and a citation pointing at a
+    # version that was never released is worse than no citation file. The
+    # release gate checks all three agree.
+    "CITATION.cff:^version",
 ]
 tag_format = "v$version"
 annotated_tag = true

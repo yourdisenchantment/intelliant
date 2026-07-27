@@ -86,14 +86,18 @@ jobs:
       - name: Dependency hygiene
         run: uv run deptry .
 
-      # pyproject and __init__ are both listed in commitizen's version_files.
-      # If they ever drift, a release would ship one number and report another.
+      # pyproject, __init__ and CITATION.cff are all listed in commitizen's
+      # version_files, so cz bump keeps them in step. This checks that nobody
+      # edited one by hand: a release would otherwise ship one number, report
+      # another, and hand out a citation for a third.
       - name: Version consistency
         run: |
           project=$(uv run python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
           module=$(uv run python -c "import re,pathlib; print(re.search(r'__version__ = \"([^\"]+)\"', pathlib.Path('src/intelliant/__init__.py').read_text()).group(1))")
-          echo "pyproject=$project __init__=$module"
+          citation=$(uv run python -c "import re,pathlib; print(re.search(r'^version: (.+)$', pathlib.Path('CITATION.cff').read_text(), re.M).group(1))")
+          echo "pyproject=$project __init__=$module CITATION.cff=$citation"
           test "$project" = "$module"
+          test "$project" = "$citation"
 
       # Building is not enough: a wheel can build and still be unimportable
       # because a file was left out of the package.

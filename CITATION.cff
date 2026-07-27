@@ -1,0 +1,55 @@
+cff-version: 1.2.0
+title: "intelliant: clustering by ant colony optimization on a k-nearest-neighbour graph"
+message: "If you use this software in research, please cite it as below."
+type: software
+authors:
+  - alias: yourdisenchantment
+repository-code: "https://github.com/yourdisenchantment/intelliant"
+url: "https://pypi.org/project/intelliant/"
+abstract: >-
+  A clustering library that operates on a k-nearest-neighbour similarity graph
+  rather than in feature space. Ant colony optimization reinforces edges inside
+  dense regions; clusters are read out of the resulting pheromone field by
+  thresholding. The pipeline is deliberately staged - graph construction,
+  pheromone extraction and cluster assignment are separate objects, and the
+  intermediate state is inspectable and editable between stages.
+keywords:
+  - clustering
+  - ant colony optimization
+  - graph algorithms
+  - unsupervised learning
+license: MIT
+version: 0.2.0a1
+date-released: "2026-07-27"
+
+references:
+  - type: article
+    title: "Ant system: optimization by a colony of cooperating agents"
+    authors:
+      - family-names: Dorigo
+        given-names: Marco
+      - family-names: Maniezzo
+        given-names: Vittorio
+      - family-names: Colorni
+        given-names: Alberto
+    journal: "IEEE Transactions on Systems, Man, and Cybernetics, Part B"
+    volume: 26
+    issue: 1
+    start: 29
+    end: 41
+    year: 1996
+    doi: 10.1109/3477.484436
+  - type: article
+    title: "MAX-MIN Ant System"
+    authors:
+      - family-names: "Stutzle"
+        given-names: Thomas
+      - family-names: Hoos
+        given-names: "Holger H."
+    journal: "Future Generation Computer Systems"
+    volume: 16
+    issue: 8
+    start: 889
+    end: 914
+    year: 2000
+    doi: 10.1016/S0167-739X(00)00043-1
