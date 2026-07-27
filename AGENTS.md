@@ -78,6 +78,78 @@ approval. Every other agent operates under manual control or with explicit
 permission for each commit - the point is that nothing reaches a published
 branch without the maintainer having read it.
 
+## Branches, pushes and releases
+
+`main` is the published state. `dev` is where work happens. Feature branches
+come off `dev` and go back through a pull request.
+
+**Nothing is ever committed to `main` directly.** The `no-commit-to-branch`
+hook enforces it locally; `main` receives merges. One direct edit there turns
+every future release merge into a conflict.
+
+What runs when, and why it is split this way:
+
+| Stage | Runs | Cost |
+|---|---|---|
+| commit | ruff check, ruff format, whitespace, toml/yaml, large files, private keys, AST, merge markers | seconds |
+| commit-msg | `cz check`, attribution-trailer rejection | instant |
+| push | pyright, pytest with coverage | ~1 min |
+| CI on `dev` and PRs | the whole verify chain | |
+| CI on `main` | the above plus the release gate: scale test, deptry, version consistency, wheel build and install into a clean environment | |
+
+pyright and pytest run on push rather than per commit because a hook people
+skip is worse than a slow one. CI repeats everything because a local hook is
+bypassable with `--no-verify`, and because an agent reporting "all green" is
+not evidence.
+
+`dev` asks for working, clean code. `main` asks whether this could be tagged
+right now.
+
+### Verifying
+
+**Check on a clean clone, not in the working folder.** The working folder
+holds untracked leftovers and a populated `.venv`, and it will pass things CI
+fails. This has already happened once: a test imported a module that existed
+locally but was not in the repository, and the whole test collection would
+have failed on the first push.
+
+```bash
+git clone --branch dev . /tmp/verify && cd /tmp/verify
+uv sync --all-groups --all-extras --frozen
+uv run ruff check src/ tests/ && uv run pyright src/intelliant && uv run pytest tests/ --cov
+```
+
+### Releasing
+
+Maintainer only, and never by an agent on its own initiative.
+
+Versions follow project MILESTONES, not commit types, so the number is always
+passed explicitly - commitizen would otherwise derive it from the history,
+and a single `feat!` would land 1.0.0 early:
+
+```bash
+uv run cz bump 0.2.0a1
+```
+
+Order matters and is not negotiable:
+
+1. `push dev` - CI runs the verify chain.
+2. `push main` - CI runs verify plus the release gate.
+3. `push` the tag - builds, publishes through Trusted Publishing (OIDC), and
+   creates the GitHub release.
+
+Step 2 before step 3 on purpose: a green `main` means the tag will not
+surprise anyone, and if the gate catches something there is no tag to undo.
+
+Publishing happens on a `v*` tag and never on a branch push - PyPI rejects a
+re-upload of an existing version, so "publish on every push to main" would
+fail on the second push by construction. **A version number is burned
+forever** once used, even after deleting the release.
+
+Trusted Publishing must be configured on PyPI before the first tag, and its
+fields must match the workflow exactly: owner, repository, `release.yml`,
+environment `pypi`.
+
 ## Task classification (which model does what)
 
 The project is solo and time is scarce, so work is split between a strong
@@ -148,6 +220,13 @@ No unified pipeline: three classes called sequentially, each independently.
 ## Constraints
 
 - Never delete files — list paths and commands, the user deletes themselves.
+- Never bump the version, tag, or push a tag on your own initiative.
+- Never use `--no-verify`. A hook that fails is reporting something; the fix
+  is the code, not the bypass.
+- Never report a check as passing without its output. "All green" is a claim.
+- Do not add files that pin the repository to one assistant — `CLAUDE.md`,
+  `.cursorrules`, `.mcp.json` and their kin are gitignored on purpose. This
+  file is the exception, because every agent reads it.
 - Do not touch `.env` or files with secrets.
 - Do not bump package version without an explicit command.
 - Coder edits only `src/intelliant/` unless told otherwise.

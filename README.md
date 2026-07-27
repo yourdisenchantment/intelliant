@@ -6,6 +6,7 @@ Clustering by ant colony optimization on a k-nearest-neighbour graph.
 [![Python](https://img.shields.io/pypi/pyversions/intelliant)](https://pypi.org/project/intelliant/)
 [![CI](https://github.com/yourdisenchantment/intelliant/actions/workflows/ci.yml/badge.svg)](https://github.com/yourdisenchantment/intelliant/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![intelliant-core](https://img.shields.io/badge/intelliant--core-superseded-lightgrey)](https://pypi.org/project/intelliant-core/)
 
 ## Overview
 
