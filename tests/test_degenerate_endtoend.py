@@ -151,7 +151,11 @@ def test_synthetic_three_clusters_endtoend():
 def test_single_edge_graph():
     section("Graph with a single edge (N=2)")
 
-    G_tiny = csr_matrix((np.array([0.5]), (np.array([0]), np.array([1]))), shape=(2, 2))
+    # Both directions: the graph is undirected, so "a single edge" means two
+    # stored entries. With only (0, 1) the ants' deposits on (1, 0) had nowhere
+    # to land and were silently dropped - which the asymmetry warning now
+    # reports, and which this fixture had been doing unnoticed.
+    G_tiny = csr_matrix((np.array([0.5, 0.5]), (np.array([0, 1]), np.array([1, 0]))), shape=(2, 2))
     pe_tiny = make_extractor(n_ants=2, n_iterations=2, verbose=False, random_state=42)
     pe_tiny.fit(G_tiny)
     print(

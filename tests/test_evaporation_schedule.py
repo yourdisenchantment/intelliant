@@ -84,3 +84,48 @@ def test_effective_rate_matches_the_documented_formula():
 def test_unknown_schedule_is_rejected():
     with pytest.raises(ValueError, match="evaporation_schedule must be one of"):
         PheromoneExtractor(**{**BASE_PHEROMONE, "evaporation_schedule": "per-ant"}, n_ants=1, verbose=False)
+
+
+def test_asymmetric_graph_reports_dropped_deposits():
+    """An ant stepping i -> j deposits on both directions.
+
+    If the reverse edge is not stored, that half of every deposit lands
+    nowhere. The kernel counts the misses - free, since the lookup happens
+    anyway - so the warning reports the actual damage rather than the mere
+    possibility of it.
+    """
+
+    asymmetric = csr_matrix(
+        (np.ones(3), (np.array([0, 1, 2]), np.array([1, 2, 1]))),
+        shape=(3, 3),
+    )
+    pe = PheromoneExtractor(
+        **{**BASE_PHEROMONE, "n_iterations": 2, "path_length": 3},
+        n_ants=5,
+        warmup=False,
+        verbose=False,
+        random_state=1,
+    )
+    with pytest.warns(UserWarning, match="deposits fell on edges missing from the graph"):
+        pe.fit(asymmetric)
+
+
+def test_symmetric_graph_reports_nothing():
+    """The mirror case: a symmetric graph must stay silent."""
+
+    symmetric = csr_matrix(
+        (np.ones(4), (np.array([0, 1, 1, 2]), np.array([1, 0, 2, 1]))),
+        shape=(3, 3),
+    )
+    pe = PheromoneExtractor(
+        **{**BASE_PHEROMONE, "n_iterations": 2, "path_length": 3},
+        n_ants=5,
+        warmup=False,
+        verbose=False,
+        random_state=1,
+    )
+    import warnings as _warnings
+
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("error")
+        pe.fit(symmetric)

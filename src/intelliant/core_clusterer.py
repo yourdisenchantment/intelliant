@@ -263,7 +263,10 @@ class CoreClusterer:
 
                 vote_mat = csr_matrix((w, (r, c)), shape=(len(batch), n_clusters))
                 has_vote = np.diff(vote_mat.indptr) > 0
-                assigned = vote_mat.argmax(axis=1).A1
+                # np.asarray(...).ravel() rather than .A1: the latter is an
+                # np.matrix attribute, and np.matrix is legacy - this breaks on
+                # a scipy release, which Dependabot now proposes.
+                assigned = np.asarray(vote_mat.argmax(axis=1)).ravel()
 
                 new_labels[batch[has_vote]] = valid_clusters[assigned[has_vote]]
                 newly_resolved += has_vote.sum()
@@ -342,7 +345,12 @@ class CoreClusterer:
 
         if self.absorb_isolated and still_noise and X is not None:
             t0 = perf_counter()
-            core_to_idx = np.empty(valid_clusters.max() + 1, dtype=np.int32)
+            # np.full rather than np.empty, matching absorb_pheromone: the
+            # empty version is safe only while every value in cores_ is also in
+            # valid_clusters, and the staged design lets a caller edit cores_
+            # between stages. Uninitialised memory fails silently and
+            # non-deterministically once that stops holding.
+            core_to_idx = np.full(valid_clusters.max() + 1, -1, dtype=np.int32)
             core_to_idx[valid_clusters] = np.arange(len(valid_clusters))
             idx = core_to_idx[self.cores_]
             mask = self.cores_ >= 0
@@ -378,7 +386,11 @@ class CoreClusterer:
             f"{final_noise:,} points left as -1, total {perf_counter() - t_start:.2f}s"
         )
 
-        cluster_sizes = np.unique(new_labels[new_labels >= 0], return_counts=True)[1]
+        # np.isin against valid_clusters, not `>= 0`: this method treats
+        # anything outside valid_clusters as unresolved, and the diagnostic has
+        # to count the same points the log above just reported.
+        resolved = np.isin(new_labels, valid_clusters)
+        cluster_sizes = np.unique(new_labels[resolved], return_counts=True)[1]
         diag = self._detect_giant(cluster_sizes)
         self._log_giant(
             diag,

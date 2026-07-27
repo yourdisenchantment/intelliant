@@ -12,6 +12,10 @@ from tqdm.auto import tqdm
 from ._validation import _check_bool, _check_float, _check_int
 
 
+# fastmath permits float reassociation, which is why this is fast - and why
+# results are only guaranteed bit-identical on one machine with one numba
+# build. The determinism tests hold within a platform, not across them; treat
+# cross-platform reproduction as approximate.
 @njit(cache=True, fastmath=True)
 def _step_ants(
     indptr: np.ndarray,
@@ -126,7 +130,17 @@ def _update_edges(
     rows: np.ndarray,
     cols: np.ndarray,
     vals: np.ndarray,
-) -> None:
+) -> int:
+    """Adds deposits in place; returns how many fell on edges that do not exist.
+
+    An ant stepping i -> j deposits on both (i, j) and (j, i). On an
+    asymmetric graph the reverse edge is not stored, and that half of the
+    deposit has nowhere to go. Counting the misses here is free - the lookup
+    happens anyway - and it measures the actual damage rather than checking
+    symmetry up front, which would cost an O(nnz) allocation on every fit.
+    """
+
+    missed = 0
     for k in range(len(rows)):
         r = rows[k]
         c = cols[k]
@@ -144,6 +158,10 @@ def _update_edges(
 
         if lo < e and col_indices[lo] == c:
             data[lo] += v
+        else:
+            missed += 1
+
+    return missed
 
 
 class PheromoneExtractor:
@@ -254,7 +272,7 @@ class PheromoneExtractor:
         self.tau_max = tau_max
         self.use_no_return = _check_bool("use_no_return", use_no_return)
 
-        self.random_state = random_state
+        self.random_state = _check_int("random_state", random_state, 0, allow_none=True)
         self.warmup = _check_bool("warmup", warmup)
         self.verbose = _check_bool("verbose", verbose)
 
@@ -307,6 +325,9 @@ class PheromoneExtractor:
     def fit(self, graph: csr_matrix) -> Self:
         if self.n_ants is None:
             raise ValueError("n_ants is required: set it explicitly, e.g. n_ants=len(X) to start")
+        # Not dead code, though it looks it: the constructor already enforces
+        # >= 1, but the staged design makes every parameter a public attribute,
+        # and assigning one after construction bypasses that check entirely.
         if self.n_ants <= 0:
             raise ValueError(f"n_ants must be > 0, got {self.n_ants}")
 
@@ -394,6 +415,7 @@ class PheromoneExtractor:
 
         t_run = perf_counter()
         elite_logged = False
+        missed_deposits = 0
         for iteration in tqdm(range(self.n_iterations), disable=not self.verbose):
             elites_active = (
                 self.use_elite_ants
@@ -403,9 +425,23 @@ class PheromoneExtractor:
             if elites_active and not elite_logged:
                 self._log(f"  elite activated at iteration {iteration}")
                 elite_logged = True
-            self._run_iteration(is_elite if elites_active else no_elite)
+            missed_deposits += self._run_iteration(is_elite if elites_active else no_elite)
             self._clamp_pheromones()
         self._log(f"  swarm run in {perf_counter() - t_run:.2f}s")
+
+        # The ACO deposits on both directions of every traversed edge, so a
+        # missing reverse edge silently swallows half the deposit. Rather than
+        # verifying symmetry up front - an O(nnz) allocation on every fit, and
+        # prohibitive on a graph with 10^8 edges - the kernel counts the
+        # deposits that landed nowhere, which is the damage itself.
+        if missed_deposits > 0:
+            warnings.warn(
+                f"{missed_deposits:,} pheromone deposits fell on edges missing from the graph and were "
+                f"discarded: the graph is not symmetric. Ants deposit on both (i, j) and (j, i), so the "
+                f"result understates the reverse direction. Build the graph with GraphBuilder, or "
+                f"symmetrize it before fitting.",
+                stacklevel=2,
+            )
 
         self._log(
             f"[aco] done: pheromone range "
@@ -415,7 +451,7 @@ class PheromoneExtractor:
 
         return self
 
-    def _run_iteration(self, is_elite: np.ndarray) -> None:
+    def _run_iteration(self, is_elite: np.ndarray) -> int:
         assert self.pheromone_matrix_ is not None
         assert self.pheromone_matrix_.data is not None
         assert self._graph is not None
@@ -434,6 +470,7 @@ class PheromoneExtractor:
         if self.evaporation_schedule == "iteration":
             self.pheromone_matrix_.data *= 1.0 - self.evaporation_rate
 
+        missed = 0
         for _ in range(self.path_length):
             if not alive.any():
                 break
@@ -464,7 +501,7 @@ class PheromoneExtractor:
                 self.pheromone_matrix_.data *= 1.0 - self.evaporation_rate
 
             if len(rows) > 0:
-                _update_edges(
+                missed += _update_edges(
                     self._indptr,
                     self._indices,
                     self.pheromone_matrix_.data,
@@ -472,6 +509,8 @@ class PheromoneExtractor:
                     cols,
                     vals,
                 )
+
+        return missed
 
     def _clamp_pheromones(self) -> None:
         assert self.pheromone_matrix_ is not None

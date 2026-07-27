@@ -26,6 +26,14 @@ class GraphBuilder:
         verbose: bool = True,
     ) -> None:
         self.n_neighbors = _check_int("n_neighbors", n_neighbors, 1)
+
+        # A name or a callable, and nothing narrower: sklearn and pynndescent
+        # each accept their own set of names plus user-supplied distance
+        # functions, so checking against a hardcoded list would reject metrics
+        # that work. A misspelled name still surfaces from the backend; what is
+        # caught here is a value that could never be a metric at all.
+        if not isinstance(metric, str) and not callable(metric):
+            raise ValueError(f"metric must be a string or a callable, got {type(metric).__name__}")
         self.metric = metric
 
         self.mutual = _check_bool("mutual", mutual)
@@ -43,7 +51,7 @@ class GraphBuilder:
 
         self.approx_threshold = _check_int("approx_threshold", approx_threshold, 1)
 
-        self.random_state = random_state
+        self.random_state = _check_int("random_state", random_state, 0, allow_none=True)
         self.verbose = _check_bool("verbose", verbose)
 
         self.graph_: scipy.sparse.csr_matrix | None = None
