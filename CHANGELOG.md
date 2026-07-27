@@ -70,8 +70,9 @@ existing code** - see below before installing.
 
 - Type annotations required on every signature (ruff `ANN`); tests exempt,
   since pyright deliberately does not check them.
-- 347 tests, 99% branch coverage, verified on a clean clone rather than in a
-  working folder.
+- 347 tests and 99% branch coverage as of this tag, verified on a clean clone
+  rather than in a working folder. Later releases will differ; the coverage
+  floor enforced by CI is 95%.
 - CI splits by branch: `dev` runs the verify chain, `main` additionally runs
   the release gate - scale test, dependency hygiene, version consistency, and
   a wheel build with an install smoke test.

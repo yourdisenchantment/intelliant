@@ -25,8 +25,10 @@ thing you try will fail with a missing command rather than with anything
 informative. `--all-groups` brings in `dev`, `notebooks` and `embeddings`;
 `--all-extras` brings in the optional ones. CI runs the same line.
 
-The three hook stages are not optional: they are the same checks CI runs, and
-installing them locally means finding out in seconds rather than after a push.
+**All three `install` lines are needed.** A bare `pre-commit install` wires up
+the pre-commit stage alone - you get ruff and the whitespace checks, and
+silently get no `cz check` on commit messages and no pyright or pytest on
+push. The first sign is CI failing on something a hook was supposed to catch.
 
 ## The verify chain
 
@@ -37,6 +39,12 @@ uv run pyright src/intelliant           # types, 0 errors required
 uv run pytest tests/                    # tests
 uv run pytest tests/ --cov              # tests + coverage (fail_under = 95)
 ```
+
+The last two lines are not redundant. `--cov` is deliberately kept out of
+`addopts`, so that running one file - `uv run pytest tests/test_threshold.py`
+- is not failed by a coverage floor it was never going to meet. The floor
+belongs to a full run, which is why the pre-push hook is the thing that
+passes `--cov`.
 
 All of it must pass before a change is reported as done. Enforcement is split
 by cost:
@@ -57,7 +65,27 @@ Some checks stay manual and belong to a release rather than to a commit:
 ```bash
 uv run pytest tests/ -m slow    # the 50k scale test, excluded by default
 uv run deptry .                 # dependency hygiene
+uv run ruff check --select DOC --ignore DOC502 --preview src/   # docstrings
 ```
+
+CI runs these on `main` only, as a release gate.
+
+### Verify on a clean clone, not in your working folder
+
+A working folder carries untracked leftovers and a populated `.venv`, and it
+will pass things CI fails:
+
+```bash
+git clone --branch dev . /tmp/verify && cd /tmp/verify
+uv sync --all-groups --all-extras --frozen
+uv run ruff check src/ tests/ && uv run pyright src/intelliant && uv run pytest tests/ --cov
+```
+
+This is not caution for its own sake. It has already caught a real failure
+here: a test imported a module that existed locally but had never been added
+to the repository, and the whole test collection would have died on the first
+push. `--frozen` matters too - it refuses a `uv.lock` that disagrees with
+`pyproject.toml`, which is exactly what a version bump leaves behind.
 
 ## Branches
 
@@ -83,9 +111,14 @@ The hook validates the FORM. These rules cover the rest:
   rationale attached to the diff is the asset.
 - **One concern per commit.** Source, tests, notebooks and config move
   separately.
-- **No model attribution.** No `Co-Authored-By: <model>` trailers. Several
-  models have worked on this repository and crediting one of them misstates
-  authorship; the history records decisions, not tooling.
+- **No attribution trailers at all.** The commit-msg hook rejects every
+  `Co-Authored-By:` and `Signed-off-by:` line, not just the ones naming a
+  model. The rule exists because several models have worked on this
+  repository and crediting one of them misstates authorship - but a hook that
+  tried to tell a model from a co-author would need a list of model names that
+  goes stale monthly, so it refuses the whole trailer. On a single-maintainer
+  project that costs nothing; if you are genuinely co-authoring, name the
+  other person in the commit body.
 
 ## Docstrings
 

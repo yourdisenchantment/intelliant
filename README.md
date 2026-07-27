@@ -8,6 +8,10 @@ Clustering by ant colony optimization on a k-nearest-neighbour graph.
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![intelliant-core](https://img.shields.io/badge/intelliant--core-superseded-lightgrey)](https://pypi.org/project/intelliant-core/)
 
+> **`intelliant-core` is an earlier incarnation of this project, not a
+> component of it.** It is superseded and should not be installed; the
+> repository its metadata points at no longer exists. Install `intelliant`.
+
 ## Overview
 
 Most clustering algorithms draw boundaries in feature space. This one does
@@ -79,8 +83,12 @@ labels = CoreClusterer(
     gap_ratio=3.0, max_gap_rank=3, batch_size=1000,
 ).fit_predict(aco.pheromone_matrix_, threshold_value=cutoff.value, X=X)
 
-print(adjusted_rand_score(y, labels))  # 0.807
+print(adjusted_rand_score(y, labels))  # 0.807 on the author's machine
 ```
+
+Every stage is seeded, so the run is reproducible - but the exact figure
+moves with numba, BLAS and scipy versions. Treat it as "around 0.8", not as
+a value to assert against.
 
 The stages are deliberately not fused into a single `fit`. Everything between
 them - `graph_`, `pheromone_matrix_`, `cores_`, `labels_pheromone_` - is

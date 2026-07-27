@@ -3,8 +3,14 @@
 Google style, Napoleon-compatible. Checked by
 
 ```bash
-uv run ruff check --select D,DOC --preview src/
+uv run ruff check --select DOC --ignore DOC502 --preview src/
 ```
+
+That is the exact line CI runs in the release gate, so a local pass means a
+green gate. `D` needs no flags: it is in `select` in `pyproject.toml` and runs
+on every commit. `DOC` is not, because `--preview` rules can change between
+ruff releases and a docstring linter that breaks the commit hook on an upgrade
+is worse than one that runs at release time.
 
 `D` (pydocstyle) covers form; `DOC` (pydoclint) checks that `Args`, `Returns`
 and `Raises` actually match the signature and body. `darglint` does the same
@@ -111,9 +117,13 @@ Example:
 The README example broke silently when the API changed and stayed broken for
 an unknown time. Examples that nothing executes rot the same way.
 
-## Working from an autoDocstring template
+## Working from a generated template
 
-The templates are scaffolding, not structure. Converting one:
+The examples below are VS Code's autoDocstring, because that is what produced
+the placeholders already in this repository. PyCharm, Neovim and the rest emit
+different scaffolding, and the specific strings will not match - the rule
+does. Whatever generated it, a template is scaffolding, not structure, and it
+gets converted rather than filled in. Converting one:
 
 1. Replace `_summary_` with a real first line; delete `_extended_summary_` if
    there is nothing to add.
