@@ -14,6 +14,7 @@ permissions:
   contents: read
 
 jobs:
+  # Everything runs this. dev asks for working, clean code - nothing more.
   verify:
     name: verify chain
     runs-on: ubuntu-latest
@@ -45,3 +46,58 @@ jobs:
       # local run and CI cannot disagree about it.
       - name: Tests
         run: uv run pytest tests/ --cov
+
+  # main holds what gets published, so it is held to release readiness rather
+  # than to "it works". These are the checks the release checklist used to
+  # carry by hand, and they are the same ones release.yml runs before it
+  # builds - a green main means a tag would not surprise anyone.
+  release-gate:
+    name: release gate
+    needs: verify
+    if: github.ref_name == 'main' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras --frozen
+
+      # TODO: enable once the docstrings land (plan phase 3). Turning it on
+      # earlier makes main red by construction, since the sources carry none.
+      # - name: Docstrings
+      #   run: uv run ruff check --select D --config 'lint.pydocstyle.convention = "google"' src/
+
+      # Excluded from the default run by a marker, so nothing else would ever
+      # execute it; on a library whose selling point is scale, an unrun scale
+      # test rots quietly.
+      - name: Scale test
+        run: uv run pytest tests/ -m slow
+
+      - name: Dependency hygiene
+        run: uv run deptry .
+
+      # pyproject and __init__ are both listed in commitizen's version_files.
+      # If they ever drift, a release would ship one number and report another.
+      - name: Version consistency
+        run: |
+          project=$(uv run python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          module=$(uv run python -c "import re,pathlib; print(re.search(r'__version__ = \"([^\"]+)\"', pathlib.Path('src/intelliant/__init__.py').read_text()).group(1))")
+          echo "pyproject=$project __init__=$module"
+          test "$project" = "$module"
+
+      # Building is not enough: a wheel can build and still be unimportable
+      # because a file was left out of the package.
+      - name: Build and install into a clean environment
+        run: |
+          uv build
+          uv venv /tmp/smoke
+          uv pip install --python /tmp/smoke/bin/python dist/*.whl
+          /tmp/smoke/bin/python -c "import intelliant; print(intelliant.__version__); print(sorted(n for n in dir(intelliant) if not n.startswith('_')))"
