@@ -30,8 +30,15 @@ repos:
       # main holds the published state and receives merges, never direct
       # commits - a single direct edit there turns every release merge into a
       # conflict.
+      #
+      # Restricted to the commit stage on purpose. This hook looks at the
+      # CURRENT branch, not at what is being pushed, so at pre-push it refuses
+      # `git push origin main` while standing on main - which is exactly the
+      # documented release step. Force-push and deletion of main are blocked
+      # by a GitHub ruleset instead, which no local flag can bypass.
       - id: no-commit-to-branch
         args: [ --branch, main ]
+        stages: [ pre-commit ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.12
