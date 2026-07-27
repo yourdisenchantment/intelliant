@@ -6,15 +6,19 @@ from typing import Literal, overload
 import numpy as np
 
 
+# `value: object` is the contract, not laziness: these helpers exist to be
+# handed anything a caller passes and to reject it cleanly. A narrower
+# annotation would claim the caller had already validated what is being
+# validated here.
 @overload
-def _check_int(name: str, value, min_val: int, allow_none: Literal[False] = False) -> int: ...
+def _check_int(name: str, value: object, min_val: int, allow_none: Literal[False] = False) -> int: ...
 
 
 @overload
-def _check_int(name: str, value, min_val: int, allow_none: Literal[True]) -> int | None: ...
+def _check_int(name: str, value: object, min_val: int, allow_none: Literal[True]) -> int | None: ...
 
 
-def _check_int(name: str, value, min_val: int, allow_none: bool = False) -> int | None:
+def _check_int(name: str, value: object, min_val: int, allow_none: bool = False) -> int | None:
     if allow_none and value is None:
         return None
     suffix = " or None" if allow_none else ""
@@ -27,7 +31,7 @@ def _check_int(name: str, value, min_val: int, allow_none: bool = False) -> int 
     return int(value)
 
 
-def _check_float(name: str, value, min_val: float = 0.0, max_val: float | None = None) -> float:
+def _check_float(name: str, value: object, min_val: float = 0.0, max_val: float | None = None) -> float:
     if value is None:
         raise ValueError(f"{name} must not be None, got None")
     if isinstance(value, bool) or not isinstance(value, numbers.Real):
@@ -44,7 +48,7 @@ def _check_float(name: str, value, min_val: float = 0.0, max_val: float | None =
     return fvalue
 
 
-def _check_bool(name: str, value) -> bool:
+def _check_bool(name: str, value: object) -> bool:
     if not isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be bool, got {value!r}")
     return bool(value)

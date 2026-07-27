@@ -82,12 +82,26 @@ target-version = "py314"
 [tool.ruff.lint]
 # NPY: numpy-specific rules (legacy seeding, deprecated aliases).
 # PT: pytest style - keeps the growing suite uniform.
+# ANN: every signature carries its types.
 # D (pydocstyle, google) is deliberately NOT enabled yet: docstrings are
 # stripped until ROADMAP 0.4; turn it on when that phase starts.
-select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT"]
+#
+# Deliberately NOT enabled, each measured against this code first:
+#   C90  - flags fit (20) and the njit kernel _step_ants (19). Splitting an
+#          njit body costs inlining, and a threshold that spares it catches
+#          nothing. Useful as a review pointer, not as a gate.
+#   PL   - 26 hits, 25 of them the deliberate design: many explicit
+#          constructor parameters exist precisely because defaults were
+#          removed.
+#   N    - all 7 hits are `X`, the sklearn convention for a feature matrix.
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT", "ANN"]
 
 [tool.ruff.lint.per-file-ignores]
 "notebooks/**" = ["E402"]
+# Tests are outside pyright's include (they pass invalid types on purpose, to
+# exercise validation), so annotations there would be checked by nobody -
+# 324 lines of decoration rather than a stricter contract.
+"tests/**" = ["ANN"]
 
 [tool.ruff.format]
 quote-style = "double"

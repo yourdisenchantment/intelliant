@@ -34,7 +34,7 @@ class CoreClusterer:
         batch_size: int | None = None,
         absorb_isolated: bool = True,
         verbose: bool = True,
-    ):
+    ) -> None:
         self.min_cluster_size = _check_int("min_cluster_size", min_cluster_size, 1, allow_none=True)
 
         self.max_iterations = _check_int("max_iterations", max_iterations, 0)
@@ -53,7 +53,7 @@ class CoreClusterer:
         self.labels_pheromone_: np.ndarray | None = None
         self.labels_: np.ndarray | None = None
 
-    def _log(self, msg: str):
+    def _log(self, msg: str) -> None:
         if self.verbose:
             tqdm.write(msg)
 
@@ -93,7 +93,7 @@ class CoreClusterer:
         diag: GiantDiagnostics,
         header: str,
         suspected_note: str,
-    ):
+    ) -> None:
         self._log(header)
         self._log(f"  top sizes: {diag.top_sizes}, median: {diag.median:,.0f}")
         if diag.max_gap is not None:

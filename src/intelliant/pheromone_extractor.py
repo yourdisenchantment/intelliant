@@ -126,7 +126,7 @@ def _update_edges(
     rows: np.ndarray,
     cols: np.ndarray,
     vals: np.ndarray,
-):
+) -> None:
     for k in range(len(rows)):
         r = rows[k]
         c = cols[k]
@@ -170,7 +170,7 @@ class PheromoneExtractor:
         random_state: int | None = None,
         warmup: bool = True,
         verbose: bool = True,
-    ):
+    ) -> None:
         self.n_ants = _check_int("n_ants", n_ants, 1, allow_none=True)
 
         self.n_iterations = _check_int("n_iterations", n_iterations, 0)
@@ -243,11 +243,11 @@ class PheromoneExtractor:
 
         self._rng = np.random.default_rng(random_state)
 
-    def _log(self, msg: str):
+    def _log(self, msg: str) -> None:
         if self.verbose:
             tqdm.write(msg)
 
-    def _warmup(self):
+    def _warmup(self) -> None:
         indptr = np.array([0, 1, 2, 3], dtype=np.intp)
         indices = np.array([1, 2, 0], dtype=np.intp)
         pheromone_data = np.ones(3, dtype=np.float64)
@@ -389,7 +389,7 @@ class PheromoneExtractor:
 
         return self
 
-    def _run_iteration(self, is_elite: np.ndarray):
+    def _run_iteration(self, is_elite: np.ndarray) -> None:
         assert self.pheromone_matrix_ is not None
         assert self.pheromone_matrix_.data is not None
         assert self._graph is not None
@@ -441,7 +441,7 @@ class PheromoneExtractor:
                     vals,
                 )
 
-    def _clamp_pheromones(self):
+    def _clamp_pheromones(self) -> None:
         assert self.pheromone_matrix_ is not None
         assert self.pheromone_matrix_.data is not None
 

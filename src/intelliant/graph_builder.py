@@ -24,7 +24,7 @@ class GraphBuilder:
         approx_threshold: int = 50_000,
         random_state: int | None = None,
         verbose: bool = True,
-    ):
+    ) -> None:
         self.n_neighbors = _check_int("n_neighbors", n_neighbors, 1)
         self.metric = metric
 
@@ -48,7 +48,7 @@ class GraphBuilder:
 
         self.graph_: scipy.sparse.csr_matrix | None = None
 
-    def _log(self, msg: str):
+    def _log(self, msg: str) -> None:
         """Prints a message via tqdm.write if verbose is enabled.
 
         Args:
