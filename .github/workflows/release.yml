@@ -38,7 +38,7 @@ jobs:
       - name: Run the verify chain
         run: |
           uv sync --all-groups --all-extras --frozen
-          uv run ruff check src/ tests/ utils/
+          uv run ruff check src/ tests/
           uv run pyright src/intelliant
           uv run pytest tests/ --cov
 

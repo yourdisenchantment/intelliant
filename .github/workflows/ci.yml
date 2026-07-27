@@ -33,10 +33,10 @@ jobs:
         run: uv sync --all-groups --all-extras --frozen
 
       - name: Lint
-        run: uv run ruff check src/ tests/ utils/
+        run: uv run ruff check src/ tests/
 
       - name: Format
-        run: uv run ruff format --check src/ tests/ utils/
+        run: uv run ruff format --check src/ tests/
 
       - name: Types
         run: uv run pyright src/intelliant

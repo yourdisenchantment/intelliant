@@ -25,8 +25,8 @@ installing them locally means finding out in seconds rather than after a push.
 ## The verify chain
 
 ```bash
-uv run ruff check src/ tests/ utils/    # lint
-uv run ruff format --check src/ tests/ utils/
+uv run ruff check src/ tests/           # lint
+uv run ruff format --check src/ tests/  # formatting
 uv run pyright src/intelliant           # types, 0 errors required
 uv run pytest tests/                    # tests
 uv run pytest tests/ --cov              # tests + coverage (fail_under = 95)

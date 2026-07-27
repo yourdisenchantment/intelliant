@@ -152,6 +152,11 @@ No unified pipeline: three classes called sequentially, each independently.
 
 ## Notebooks workflow (user conventions, 2026-07-11)
 
+**Not in this repository yet.** `notebooks/` and its `utils/` helpers live
+outside it for now - the repository holds the library alone until the first
+release. The conventions below are the contract for when that work lands, so
+they are kept rather than rediscovered.
+
 Division of labor: the agent writes jupytext `.py` scripts and converts
 them to `.ipynb`; the USER runs the notebooks. Runtime output is captured
 to `output.txt` (via `utils/tee.py`) NEXT TO the notebook (gitignored) -

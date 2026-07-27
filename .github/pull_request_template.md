@@ -9,7 +9,7 @@
      not evidence - that rule applies to people and agents alike. -->
 
 ```
-uv run ruff check src/ tests/ utils/
+uv run ruff check src/ tests/
 uv run pyright src/intelliant
 uv run pytest tests/ --cov
 ```
