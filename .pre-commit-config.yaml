@@ -1,12 +1,12 @@
 # .pre-commit-config.yaml
+#
+# Mechanical checks only. Everything about the SUBSTANCE of a change - one
+# concern per commit, the "why" in the body, no repeated subjects - is checked
+# by the maintainer reading the draft in tmp/commits/ before the commit is
+# made. Automating judgement produces false positives and teaches people to
+# reach for --no-verify.
 
-# old_notebooks/ is a frozen v1 archive kept for history and as examples of
-# the old code - it is not linted and will be dropped once the new notebooks
-# supersede it.
-# old_results/ is archival data and must stay byte-identical to what the git
-# history holds, so that `git show 98474f4:results/<file>` verifies against it.
-# Even a trailing-newline fix would break that comparison.
-exclude: "^(results|old_notebooks|old_results)/"
+exclude: "^results/"
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -16,6 +16,22 @@ repos:
       - id: end-of-file-fixer
       - id: check-toml
       - id: check-yaml
+      - id: check-ast
+      - id: check-merge-conflict
+      # macOS and Windows are case-insensitive, Linux is not; a pair of files
+      # differing only in case breaks a checkout on the others.
+      - id: check-case-conflict
+      # A .env lives in the working tree.
+      - id: detect-private-key
+      # The previous repository reached 425 MB because figures were committed
+      # unnoticed. uv.lock is the largest legitimate file at ~440 KB.
+      - id: check-added-large-files
+        args: [ --maxkb=1000 ]
+      # main holds the published state and receives merges, never direct
+      # commits - a single direct edit there turns every release merge into a
+      # conflict.
+      - id: no-commit-to-branch
+        args: [ --branch, main ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.12
@@ -34,6 +50,16 @@ repos:
         name: commitizen check
         entry: uv run cz check --allow-abort --commit-msg-file
         language: system
+        stages: [ commit-msg ]
+
+      # The one message rule worth automating: several models have worked on
+      # this repository, so a trailer crediting one of them is wrong about who
+      # produced the work. It was violated twice before, and unlike the other
+      # commit rules it needs no interpretation.
+      - id: no-attribution-trailer
+        name: no attribution trailers
+        language: pygrep
+        entry: '(?i)^\s*(co-authored-by|signed-off-by)\s*:'
         stages: [ commit-msg ]
 
       # Verify chain (AGENTS.md "Pre-report order"): ruff runs per-commit
