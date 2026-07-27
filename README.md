@@ -109,6 +109,22 @@ call site.
 Parameters that do not shape the result - `verbose`, `random_state`,
 `warmup`, `knn_method`, the `use_*` heuristic switches - keep their defaults.
 
+### Where to start
+
+The absence of defaults is not a reason to guess. These are the values from
+the example above - a starting point that produces sensible clusters on
+well-separated data, **not** a recommendation that holds across datasets.
+Establishing which values do hold is exactly what calibration is for.
+
+| Stage | Starting values |
+|---|---|
+| `GraphBuilder` | `n_neighbors=15`, `metric="cosine"`, `mutual=True` |
+| `PheromoneExtractor` | `n_iterations=20`, `path_length=10`, `beta=2.0`, `alpha=1.0`, `evaporation_rate=0.07`, `evaporation_schedule="step"`, `pheromone_deposit=1.0`, `initial_pheromone=1.0`, `tau_min=0.01`, `tau_max=10.0` |
+| `CoreClusterer` | `max_iterations=20`, `gap_ratio=3.0`, `max_gap_rank=3` |
+
+Set `random_state` and change one parameter at a time. `n_ants` scales with
+the data - the example uses `len(X)`.
+
 Two that are easy to get wrong:
 
 - `n_neighbors` bounds everything downstream. No threshold can separate two
@@ -131,6 +147,13 @@ breaks. Until that settles, expect the API to move between versions.
 The previous version was published as
 [`intelliant-core`](https://pypi.org/project/intelliant-core/) with a
 single-class API. It is superseded and should not be installed.
+
+## Citation
+
+If the library is used in research, cite it through the "Cite this
+repository" button on GitHub, or from [CITATION.cff](CITATION.cff) directly.
+The algorithm builds on Ant System (Dorigo, Maniezzo and Colorni, 1996) and
+the MAX-MIN variant (Stutzle and Hoos, 2000); both are listed there with DOIs.
 
 ## Contributing
 

@@ -30,6 +30,60 @@ the pre-commit stage alone - you get ruff and the whitespace checks, and
 silently get no `cz check` on commit messages and no pyright or pytest on
 push. The first sign is CI failing on something a hook was supposed to catch.
 
+## Project layout
+
+```
+src/intelliant/    the library - five modules and a validation helper
+tests/             pytest, 348 tests (347 default + 1 marked slow)
+```
+
+The public API is four entry points and three return types:
+
+| Name | Module | Input -> Output |
+|---|---|---|
+| `GraphBuilder` | `graph_builder.py` | embeddings -> CSR similarity graph (KNN, exact or pynndescent) |
+| `PheromoneExtractor` | `pheromone_extractor.py` | CSR graph -> pheromone field (ACO/MMAS, numba) |
+| `find_threshold`, `scan_thresholds` | `threshold.py` | pheromones -> cutoff (`ThresholdResult`, `ScanRow`) |
+| `CoreClusterer` | `core_clusterer.py` | pheromone field + cutoff -> labels, noise absorption, `GiantDiagnostics` |
+
+**There is no unified `fit`, and adding one would be rejected.** The three
+classes are called in sequence and the state between them - `graph_`,
+`pheromone_matrix_`, `cores_`, `labels_pheromone_` - is public API that a user
+is expected to inspect and edit. That is the human-in-the-loop design the
+library exists to offer; fusing the stages would remove it. For the same
+reason validation stays per-stage: do not add cross-stage provenance checks
+that would refuse a matrix the user modified on purpose.
+
+Tests mirror that structure - one file per concern rather than per class:
+constructor validation, edge cases, dtypes, degenerate end-to-end runs,
+warnings, error-message style, tie-breaking determinism, threshold
+integration, property-based invariants (hypothesis), and a 50k scale smoke
+test behind the `slow` marker. Pyright's `include` is `src/intelliant` only,
+so type diagnostics inside `tests/` are expected: the tests pass invalid types
+on purpose.
+
+## Code style
+
+Beyond what ruff and pyright enforce:
+
+- **Python 3.14, ASCII only.** Line length 120, double quotes.
+- **`ValueError` messages take one shape:** `"<name> must be <range>, got
+  <value>"`. There are many of them and they are tested as a group.
+- **Results are attributes with a trailing underscore**, following sklearn:
+  `graph_`, `pheromone_matrix_`, `labels_`.
+- **Validate through `_validation.py`, not by hand.** `_check_int` accepts
+  `numbers.Integral` and rejects `bool`; `_check_float` rejects `bool` and
+  non-numerics; `_check_bool` takes `bool` or `np.bool_` and normalizes to a
+  plain `bool`. Every public parameter goes through one of them. The bool
+  checks look redundant - `bool` subclasses `int`, so `True` passes an
+  `Integral` test at runtime - and removing them is a real bug, not cleanup.
+- **Parameters that shape the result get no defaults and are keyword-only.**
+  Calibration is unfinished, so a default would be an unjustified value
+  applied silently. Do not add one back to shorten a call site.
+- **The default test run must stay at zero warnings.** `filterwarnings =
+  ["error"]` turns a stray warning into a failure; anything expected goes
+  through `pytest.warns`.
+
 ## The verify chain
 
 ```bash
@@ -155,6 +209,12 @@ tag exists. Re-lock and fold it into the bump commit.
 
 `--yes` because without it commitizen asks whether this is the first tag and
 waits forever in a non-interactive shell.
+
+`cz bump` rewrites the version in `pyproject.toml`, `src/intelliant/__init__.py`
+and `CITATION.cff` - they are its `version_files`. Do not edit any of the
+three by hand; the release gate on `main` fails if they disagree, which is
+what stops a release from shipping one number, reporting another and handing
+out a citation for a third.
 
 The tag must sit on the LAST commit of the release. `cz bump` tags whatever is
 current, so anything committed afterwards is simply not in the release - the
