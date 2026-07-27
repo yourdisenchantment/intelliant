@@ -61,7 +61,6 @@ results/**
 !results/**/
 !results/**/*.csv
 !results/**/*.json
-!results/README.md
 notebooks/**/checkpoints/
 notebooks/**/output.txt
 

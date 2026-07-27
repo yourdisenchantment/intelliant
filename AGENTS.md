@@ -85,8 +85,9 @@ with its executed output and the CSV/JSON under `results/`, push. Either way,
 **Release.** The agent prepares everything and stops at the tag: `[Unreleased]`
 complete, clean-clone verify, release-gate commands run locally, all of it
 reported with output. Then it hands over the bump-and-tag block from
-CONTRIBUTING.md. Once the tag exists the agent merges `dev` into `main`,
-pushes both branches, waits for the release gate on `main` to go green, and
+CONTRIBUTING.md. Once the tag exists the agent merges `dev` into `main` -
+excluding `notebooks/` and `results/`, per the recipe there - pushes both
+branches, waits for the release gate on `main` to go green, and
 hands back the single command that publishes. After the run it installs from
 PyPI into a clean environment and executes the README example against what
 actually downloaded.
@@ -260,67 +261,61 @@ Two consequences worth stating, because they are easy to get backwards:
   independently of what any agent reports about its own work. Never take
   "all green" from an agent as evidence; the hook is the evidence.
 
-## Notebooks workflow (user conventions, 2026-07-11)
+## Where things live
 
-**Not in this repository yet.** `notebooks/` and its `utils/` helpers live
-outside it for now - the repository holds the library alone until the first
-release, and `utils/` is gitignored so that a stray `git add .` cannot pull it
-in. The conventions below are the contract for when that work lands, so they
-are kept rather than rediscovered.
+Do not invent a location. If something does not fit the table, say so and ask
+- a file in the wrong place is found months later by someone who no longer
+remembers why it was put there.
 
-Division of labor: the agent writes jupytext `.py` scripts and converts
-them to `.ipynb`; the USER runs the notebooks. Runtime output is captured
-to `output.txt` (via `utils/tee.py`) NEXT TO the notebook (gitignored) -
-the agent analyzes `output.txt`, the user analyzes the plots. Do not ask
-the user to paste notebook output. Metrics/results go to
-`results/<...>/` as CSV/JSON (may be duplicated next to the notebook).
-`.ipynb` are ALWAYS committed WITH executed output (showcase on GitHub).
+| Path | Holds | In git |
+|---|---|---|
+| `src/intelliant/` | the library, and nothing else | yes |
+| `tests/` | pytest suite | yes |
+| `utils/` | helpers the notebooks import; not part of the package | yes |
+| `notebooks/` | notebooks and their run output, no instructions about themselves | `.ipynb` and `.py` yes, `output.txt` and `checkpoints/` no |
+| `results/` | what a publication needs: tables and the figures built from them | CSV and JSON yes, figures no |
+| `data/` | datasets and embeddings, prepared once and reused | no |
+| `tmp/` | working files for the maintainer and the agent, high rotation | no |
+| `.github/` | CI, release workflow, issue and PR templates | yes |
 
-Folder layout (agreed 2026-07-11): dataset-first with a clusterer
-subfolder - `notebooks/<group>/<dataset>/<clusterer>/`, where group =
-`2d` / `3d` / `text` (uniform depth for synthetic and real data alike).
-Each clusterer folder holds its own notebook pair
-(`<dataset>_<clusterer>.ipynb` + jupytext `.py` - unique filenames
-repo-wide), its `output.txt` and its `checkpoints/`. A `comparison/`
-subfolder per dataset holds the cross-clusterer summary. Synthetic data
-is regenerated per notebook from a fixed seed (deterministic, cheap -
-no caching). Real datasets/embeddings are prepared once and cached in
-root `data/<dataset>/` (gitignored), then loaded by every clusterer
-notebook - kernels do not share memory, reuse happens via disk.
+`notebooks/` and `results/` are empty for now; the calibration work has not
+started. They stay out of `main` when it does - see the merge recipe in
+CONTRIBUTING.md.
 
-Structure rules:
-- Imports split into SEPARATE cells, in this order: (1) third-party
-  libraries, (2) sys.path setup for `utils/`/scripts, (3) local imports,
-  (4) path/plot configuration. This avoids import warnings.
-- Every logical section starts with an `##` heading in its own markdown
-  cell, followed by a separate explanation cell; individual code cells
-  may get an optional note.
-- Execution is sectioned so intermediate pipeline states can be
-  inspected between stages (mirrors the library's human-in-the-loop
-  design - showcase it).
-- Tables are printed FULL - either aligned manual print or polars
-  with `pl.Config(tbl_rows=-1, tbl_cols=-1)`; never a bare truncated
-  `print(df)` that hides rows/columns behind `...`.
-- output.txt carries debug-level run info; results/ carries ALL data
-  (full CSV/JSON + figures).
+### The documents, and what each one owns
 
-Purpose taxonomy (keep in mind when designing runs):
-- Synthetic tests: universality demo, base-parameter calibration,
-  metrics for articles.
-- Real-dataset tests: universality + strength demo, recommended-parameter
-  calibration, metrics for articles.
-- Same datasets on other algorithms (HDBSCAN, Louvain/Leiden): capability
-  comparison.
-- Collect results machine-readable (CSV/JSON per run, multi-seed) so
-  cross-dataset tables for articles assemble without reruns.
+Nothing is stated in two of them. Every counter this repository has shipped
+wrong got that way by being written down twice.
+
+| File | Owns | Audience |
+|---|---|---|
+| `README.md` | what the library is and how to use it | user |
+| `CONTRIBUTING.md` | the development process, start to release | contributor, agent |
+| `AGENTS.md` | what the code is, and how the agent operates | agent |
+| `DOCSTRINGS.md` | docstring conventions a linter cannot check | whoever writes one |
+| `EXPERIMENTS.md` | metrics, seeds, notebook layout, what is kept | whoever runs a notebook |
+| `ROADMAP.md` | what remains before 1.0.0, and what is already established | everyone |
+| `CHANGELOG.md` | what changed per release | user |
+| `CITATION.cff` | how to cite; version tracked by `cz bump` | researcher |
+
+Notebook layout and cell structure are in EXPERIMENTS.md, not here. This file
+says who does what with a notebook; that one says what a notebook looks like.
+
+### Secrets
+
+`.env` holds real credentials and is gitignored. Never read it, never move it,
+never quote from it. `.env.example` is the tracked template and carries
+placeholder values only - if a real value ever appears there, it is a leak and
+the credential needs rotating, not editing out of the file.
 
 ## The experiment cycle
 
-The protocol - which metrics, how many seeds, what makes a run reportable -
-is in [EXPERIMENTS.md](EXPERIMENTS.md). This is who does what.
+The protocol - metrics, seeds, notebook layout, what is kept - is in
+[EXPERIMENTS.md](EXPERIMENTS.md); the plan the runs serve is in
+[ROADMAP.md](ROADMAP.md). This is who does what.
 
 1. **Agent writes the jupytext `.py`**, following the layout and cell rules in
-   `notebooks/README.md`. This file is the reviewable artifact.
+   [EXPERIMENTS.md](EXPERIMENTS.md). This file is the reviewable artifact.
 2. **Agent converts it**, and never afterwards edits the `.ipynb` by hand -
    the two would silently diverge and the `.py` is what gets read:
    ```bash
@@ -350,7 +345,6 @@ disk loses all of it, which matters most for the roadmap, since that is the
 plan rather than a note about it.
 
 ```
-tmp/ROADMAP.md    phases and what "done" means for each
 tmp/TASK.md       active items only, one stage at a time
 tmp/REVIEW.md     one section per item, then a verdict once all are covered
 tmp/done/         finished stages, moved out of TASK.md and dated

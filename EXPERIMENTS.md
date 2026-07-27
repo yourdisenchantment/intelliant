@@ -1,9 +1,12 @@
 # Experiment protocol
 
 One protocol so that runs made weeks apart pool into a single table without
-rerunning anything. `notebooks/README.md` covers where files go and
-`results/README.md` covers what is stored; this file covers what is measured
-and what makes a result usable.
+rerunning anything: what is measured, how a notebook is laid out, and what is
+kept afterwards. It lives here rather than in a README beside each folder -
+`notebooks/` holds notebooks and their output, `results/` holds results, and
+neither holds instructions about itself.
+
+The plan those runs serve is in [ROADMAP.md](ROADMAP.md).
 
 ## The metric set is closed
 
@@ -87,3 +90,72 @@ metric convention. Comparing a five-seed mean against a single-seed number, or
 
 When comparing against another algorithm, the abstention rates will differ -
 that is the case `ARI_all` exists for. Report `NoisePct` for both.
+
+## Notebook layout
+
+```
+notebooks/<group>/<dataset>/<clusterer>/
+```
+
+`<group>` is `2d`, `3d` or `text`, so synthetic and real data sit at the same
+depth. Each clusterer folder holds one notebook pair, its run log and its
+checkpoints:
+
+```
+notebooks/2d/blobs/intelliant/
+    blobs_intelliant.ipynb      committed WITH executed output
+    blobs_intelliant.py         jupytext source, the reviewed artifact
+    output.txt                  run log, gitignored
+    checkpoints/                gitignored
+notebooks/2d/blobs/comparison/  cross-clusterer summary for this dataset
+```
+
+Notebook filenames are unique across the repository - `blobs_intelliant`, not
+`notebook` - so a name in a report identifies exactly one file.
+
+Synthetic data is regenerated per notebook from a fixed seed: deterministic
+and cheap, so there is nothing to cache. Real datasets are prepared once into
+`data/` and loaded by every clusterer notebook, since kernels do not share
+memory and reuse happens through the disk.
+
+## Notebook structure
+
+Imports go in separate cells, in this order: third-party libraries, then the
+`sys.path` setup that makes `utils/` importable, then local imports, then path
+and plot configuration. Splitting them this way avoids import warnings.
+
+Every section opens with an `##` heading in its own markdown cell followed by
+a separate explanation cell. Execution is sectioned so the pipeline can be
+inspected between stages - that mirrors the library's staged design, which is
+the thing worth showing.
+
+Print tables in full: aligned manual output, or polars with
+`pl.Config(tbl_rows=-1, tbl_cols=-1)`. Never a bare `print(df)` that hides
+rows behind an ellipsis - a truncated table in a run log is a result nobody
+can check.
+
+## What is kept
+
+`results/` holds what a publication needs: the tables, and the figures built
+from them.
+
+| Artifact | Location | Versioned |
+|---|---|---|
+| notebook + jupytext source | `notebooks/<...>/` | yes |
+| run log | `output.txt` beside the notebook | no |
+| tables | `results/<...>/*.csv`, `*.json` | yes |
+| figures | `results/<...>/` | no |
+| datasets and embeddings | `data/<dataset>/` | no |
+
+`.ipynb` are committed with their output on purpose: they are the showcase on
+GitHub, and a notebook whose results you cannot see proves nothing.
+
+Figures are the one deliberate exception among publication artifacts. A run's
+numbers are a few kilobytes and expensive to reproduce; figures are derived
+from those numbers and cost megabytes. The previous repository reached 425 MB
+that way and its history had to be rewritten to recover.
+
+Mirror the notebook path under `results/` so a table traces back to the run
+that produced it. The rules are in `.gitignore` under `results/**` - note the
+`**`, since with a plain `results/` git never descends into the directory and
+the negations below it would silently do nothing.

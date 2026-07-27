@@ -147,6 +147,31 @@ push. `--frozen` matters too - it refuses a `uv.lock` that disagrees with
   receives merges from `dev` at a release.
 - `dev` - active development. Pull requests target `dev`.
 
+`main` carries the library and every document that states how the project
+works. It does not carry `notebooks/` or `results/` - the experiments are
+research apparatus rather than part of the published package, and they would
+grow without bound in the one place meant to stay readable.
+
+That makes the two branches diverge permanently, so a release merge is no
+longer a fast-forward:
+
+```bash
+git checkout main
+git merge --no-commit --no-ff dev
+git rm -r -f --ignore-unmatch notebooks results
+git commit --no-edit
+git checkout dev
+```
+
+The `git rm` both applies the exclusion and resolves the modify/delete
+conflict that the previous exclusion creates, so the same four lines work at
+every release rather than only the first.
+
+Note what this does not do: the merge brings `dev`'s history with it, so those
+files stay reachable from `main` and a clone still fetches them. The exclusion
+governs what `main`'s tree contains - what a visitor browses and what a source
+archive holds - not the size of the repository.
+
 Do not edit `README.md` or any other shared file directly on `main`: a single
 direct edit there turns every future release merge into a conflict.
 
