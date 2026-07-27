@@ -1,6 +1,6 @@
 [project]
 name = "intelliant"
-version = "0.1.0a2"
+version = "0.2.0a1"
 description = "Semantic core extraction on graphs using Ant Colony Optimization"
 readme = "README.md"
 authors = [{ name = "Pavel", email = "p.idisenchantment@gmail.com" }]
@@ -160,7 +160,7 @@ fail_under = 95
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0a2"
+version = "0.2.0a1"
 version_files = [
     "pyproject.toml:version",
     "src/intelliant/__init__.py:__version__",
