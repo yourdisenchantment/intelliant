@@ -61,14 +61,9 @@ results/**
 !results/**/
 !results/**/*.csv
 !results/**/*.json
+!results/README.md
 notebooks/**/checkpoints/
 notebooks/**/output.txt
-
-# Notebook helpers (output tee, metrics). They will be versioned when the
-# notebooks land; until then the folder exists only in the working copy and
-# a `git add .` would otherwise commit it into a library-only release.
-# Delete these two lines together with the notebooks commit.
-utils/
 
 # Session artifacts (working notes, drafts, migration staging)
 tmp/
