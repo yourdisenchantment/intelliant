@@ -314,19 +314,62 @@ Purpose taxonomy (keep in mind when designing runs):
 - Collect results machine-readable (CSV/JSON per run, multi-seed) so
   cross-dataset tables for articles assemble without reruns.
 
-## Workflow cycle (`tmp/TASK.md` <-> `tmp/REVIEW.md`)
+## The experiment cycle
 
-Both files are gitignored working state, not part of the repository. There are
-no templates in the repository either - if you have not been handed the file,
-ask for it rather than inventing a format.
+The protocol - which metrics, how many seeds, what makes a run reportable -
+is in [EXPERIMENTS.md](EXPERIMENTS.md). This is who does what.
 
-- `tmp/TASK.md` holds **only active items**, one stage at a time. Finished
-  stages move out of it rather than accumulating.
+1. **Agent writes the jupytext `.py`**, following the layout and cell rules in
+   `notebooks/README.md`. This file is the reviewable artifact.
+2. **Agent converts it**, and never afterwards edits the `.ipynb` by hand -
+   the two would silently diverge and the `.py` is what gets read:
+   ```bash
+   uv run jupytext --to ipynb notebooks/<group>/<dataset>/<clusterer>/<name>.py
+   ```
+3. **Hand off. The maintainer runs the notebook.** Do not ask for output to be
+   pasted, and do not ask what the plots showed unless the question is about
+   the plots specifically.
+4. **Agent reads `output.txt` and the files under `results/`.** That is the
+   whole reason `utils.Tee` exists.
+5. **Agent analyses.** Three outcomes, and they are different:
+   - the run is broken - fix the `.py`, reconvert, back to step 3;
+   - the run is fine and produced a finding - record it;
+   - the finding implies a decision about the research - raise it, do not
+     take it.
+6. **Agent commits** the notebook with its executed output and the results
+   files, then pushes `dev`.
+
+A finding either changes the library or it does not. If it does, the change
+goes through the normal cycle - tests, verify chain, its own commit. If a user
+would notice, `[Unreleased]` gets an entry.
+
+## Working state under `tmp/`
+
+Everything here is gitignored. It has **no history and no backup** - a lost
+disk loses all of it, which matters most for the roadmap, since that is the
+plan rather than a note about it.
+
+```
+tmp/ROADMAP.md    phases and what "done" means for each
+tmp/TASK.md       active items only, one stage at a time
+tmp/REVIEW.md     one section per item, then a verdict once all are covered
+tmp/done/         finished stages, moved out of TASK.md and dated
+tmp/commits/      drafted commit messages, when the drafting rule is in force
+```
+
+There are no templates for these in the repository. If you have not been
+handed the file, ask for it rather than inventing a format.
+
+- `tmp/TASK.md` holds **only active items**. Finished stages move to
+  `tmp/done/` rather than accumulating, so the file stays readable at a
+  glance.
 - The coder takes **one item at a time**, writes a report under it and marks
   it `[~]`. Only the reviewer sets the final status: `[x]` for done, `[!]`
   for needs work.
-- The reviewer writes one section per item in `tmp/REVIEW.md`, then a summary
-  verdict once every item is covered.
+- Nothing that ships may link to any of this. It is absent from git history by
+  design, so a reference to it from a released document points nowhere - that
+  already happened once, in an issue template promising a roadmap nobody could
+  open.
 - Report findings you reproduced, not findings you inferred from reading. Two
   of eleven in the last round were withdrawn because the tests proved the
   review wrong.

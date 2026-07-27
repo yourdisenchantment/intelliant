@@ -26,10 +26,7 @@ results/2d/blobs/intelliant/
     summary.json
 ```
 
-Write one row per run, with every parameter that varied as its own column, and
-the seed among them. A table that records the metric but not the settings that
-produced it cannot be pooled with anything later - which is the entire reason
-these files are versioned rather than regenerated.
-
-Multi-seed runs go in the same file with the seed as a column, not in separate
-files per seed.
+What a row must contain - the metric set, the parameters, the seed - is in
+[EXPERIMENTS.md](../EXPERIMENTS.md), together with the rule for adding a
+metric and what makes a run reportable at all. It is not repeated here: two
+copies of a protocol drift, and the results are what drift into.

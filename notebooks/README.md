@@ -3,6 +3,10 @@
 Calibration and comparison runs. The library is the subject; these are the
 experiments performed on it.
 
+This file covers mechanics - where things go, how a notebook is structured.
+What gets measured and what makes a run usable is the protocol, in
+[EXPERIMENTS.md](../EXPERIMENTS.md).
+
 ## Layout
 
 ```
