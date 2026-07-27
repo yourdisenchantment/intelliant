@@ -136,7 +136,49 @@ anyway.
 
 ## Agents
 
-Automated agents work under `AGENTS.md`, which is part of the contract rather
-than a hint: it defines which model may take which task, requires commit
-messages to be drafted into `tmp/commits/` for review before anything is
-committed, and forbids version bumps and file deletion.
+Everything above applies to automated agents unchanged - the verify chain, the
+commit rules, the branch rules. What follows is the part that only comes up
+when the contributor is a model.
+
+**Commit messages are drafted into `tmp/commits/`, not straight into git.**
+The maintainer reads the draft and then either approves the commit or performs
+it personally. The one exception is the strong model driving a session, which
+may commit and push on its own judgement so that routine work does not need
+approval per command. Every other agent works under manual control, or with
+explicit permission for each commit. The point is not ceremony: nothing
+reaches a published branch without the maintainer having read it.
+
+Hard limits, in addition to the rules above:
+
+- **Never delete a file.** List the paths and the command; the maintainer runs
+  it.
+- **Never bump the version, create a tag, or push one.** Versions track
+  project milestones, and only the maintainer knows when one was reached.
+- **Never use `--no-verify`.** A failing hook is reporting something. The fix
+  is the code.
+- **Never report a check as passing without its output.** "All green" is a
+  claim, not evidence - and the whole reason pyright and pytest run in a hook
+  and again in CI is that self-reports are not trusted.
+- **Do not add files that pin the repository to one assistant.** `CLAUDE.md`,
+  `.cursorrules`, `.mcp.json` and their kin are gitignored deliberately.
+- **Do not touch `.env` or any file holding secrets.**
+
+Work is split between a strong model and a cheaper one, and the dividing line
+is not task size:
+
+> A task goes to the cheaper model when success is checkable by running a
+> command, AND the spec leaves no design decisions open.
+
+So: tests from an enumerated list of cases, docstrings from placed templates,
+mechanical refactors from an explicit list, lint fixes. Producing that list -
+and reviewing what came back - stays with the strong model, along with
+anything where a wrong choice is expensive and CI would not catch it: the
+calibration protocol, the algorithm mechanisms, the threshold methods, the
+shape of the public API.
+
+Two consequences that are easy to get backwards. The cheaper model needs a
+**stricter** spec, not a looser one, so part of the strong model's work shifts
+from writing code to writing specs detailed enough that the code becomes
+mechanical. And the safety net is the verify chain, not judgement - delegation
+is only cheap because the pre-push hook runs pyright and pytest independently
+of what any agent claims about its own work.

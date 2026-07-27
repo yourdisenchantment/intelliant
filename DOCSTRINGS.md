@@ -66,9 +66,9 @@ value from the ACO literature transfers.
 `Args`, `Returns`, `Raises`, `Yields`, `Attributes`, `Warns`, `Example`,
 `Note`. In that order, omitting the ones that do not apply.
 
-- **`Raises` is mandatory** wherever the function raises. There are 58
-  `raise ValueError` sites, and without this section a caller learns the
-  contract by crashing.
+- **`Raises` is mandatory** wherever the function raises. Validation is dense
+  here - every public parameter is checked - and without this section a caller
+  learns the contract by crashing.
 - **Group by cause, do not enumerate sites.** One `ValueError:` entry naming
   the conditions beats fifteen identical lines - which is exactly what
   autoDocstring generates from a scan, and it must be collapsed.

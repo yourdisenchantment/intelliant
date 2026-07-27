@@ -219,7 +219,7 @@ No unified pipeline: three classes called sequentially, each independently.
 ## Tests
 
 - `tests/` — pytest, 348 tests (347 default + 1 slow). Config in `pyproject.toml` `[tool.pytest.ini_options]`.
-- Coverage: constructor validation, edge cases, dtype, degenerate end-to-end, warnings, error message coverage (all 52 ValueError sites), tie-breaking determinism, threshold integration, property-based invariants (hypothesis), scale smoke (50k, slow marker).
+- Coverage: constructor validation, edge cases, dtype, degenerate end-to-end, warnings, error message coverage (every `raise ValueError` site), tie-breaking determinism, threshold integration, property-based invariants (hypothesis), scale smoke (50k, slow marker).
 - LSP diagnostics in `tests/` are expected: tests deliberately pass invalid types to check validation. Pyright `include` is `src/intelliant` only, not `tests/`.
 - The default run must stay at ZERO pytest warnings; every expected warning goes through `pytest.warns`.
 - Slow tests excluded by default (`addopts = "-m 'not slow'"`). Run with `uv run pytest tests/ -m slow`.

@@ -85,7 +85,7 @@ Published from the previous repository. Three-class architecture, 306 tests,
 
 First published alpha.
 
-[Unreleased]: https://github.com/yourdisenchantment/intelliant/compare/v0.2.0a1...HEAD
+[Unreleased]: https://github.com/yourdisenchantment/intelliant/compare/v0.2.0a1...dev
 [0.2.0a1]: https://github.com/yourdisenchantment/intelliant/releases/tag/v0.2.0a1
 [0.1.0a2]: https://pypi.org/project/intelliant/0.1.0a2/
 [0.1.0a1]: https://pypi.org/project/intelliant/0.1.0a1/
