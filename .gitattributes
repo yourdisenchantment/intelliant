@@ -1,0 +1,41 @@
+* text=auto
+
+# Исходники и конфиги
+*.py    text eol=lf
+*.toml  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+
+# Документация и данные
+*.md    text eol=lf
+*.txt   text eol=lf
+*.csv   text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+
+# Веб (на случай notebooks с экспортом)
+*.js    text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+
+# Jupyter
+*.ipynb text eol=lf
+
+# Локи - текст, но диффить не нужно
+*.lock  text eol=lf -diff
+
+# Бинарники - не трогать
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.pkl   binary
+*.npy   binary
+*.npz   binary
+*.pt    binary
+*.pth   binary
+*.bin   binary

@@ -1,0 +1,58 @@
+# .pre-commit-config.yaml
+
+# old_notebooks/ is a frozen v1 archive kept for history and as examples of
+# the old code - it is not linted and will be dropped once the new notebooks
+# supersede it.
+# old_results/ is archival data and must stay byte-identical to what the git
+# history holds, so that `git show 98474f4:results/<file>` verifies against it.
+# Even a trailing-newline fix would break that comparison.
+exclude: "^(results|old_notebooks|old_results)/"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-toml
+      - id: check-yaml
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff-check
+        args: [ --fix, --exit-non-zero-on-fix ]
+        types: [ python ]
+        files: \.(py|ipynb)$
+      - id: ruff-format
+        types: [ python ]
+        files: \.(py|ipynb)$
+
+  - repo: local
+    hooks:
+      - id: commitizen
+        name: commitizen check
+        entry: uv run cz check --allow-abort --commit-msg-file
+        language: system
+        stages: [ commit-msg ]
+
+      # Verify chain (AGENTS.md "Pre-report order"): ruff runs per-commit
+      # above; pyright and pytest run on push - too slow per commit, and a
+      # skipped hook is worse than a slow one.
+      - id: pyright
+        name: pyright (src/intelliant)
+        entry: uv run pyright src/intelliant
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [ pre-push ]
+
+      # Coverage lives here rather than in addopts so that running a single
+      # test file locally is not gated by fail_under.
+      - id: pytest
+        name: pytest + coverage (default markers)
+        entry: uv run pytest tests/ --cov
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [ pre-push ]

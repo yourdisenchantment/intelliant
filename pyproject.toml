@@ -1,0 +1,142 @@
+[project]
+name = "intelliant"
+version = "0.1.0a2"
+description = "Semantic core extraction on graphs using Ant Colony Optimization"
+readme = "README.md"
+authors = [{ name = "Pavel", email = "p.idisenchantment@gmail.com" }]
+license = { text = "MIT" }
+keywords = [
+    "clustering",
+    "ant-colony-optimization",
+    "graph-clustering",
+    "embeddings",
+    "unsupervised-learning",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+requires-python = ">=3.14"
+dependencies = [
+    "numpy",
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "pynndescent",
+    "tqdm",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourdisenchantment/intelliant"
+Repository = "https://github.com/yourdisenchantment/intelliant"
+Issues = "https://github.com/yourdisenchantment/intelliant/issues"
+
+[dependency-groups]
+notebooks = [
+    "jupyter",
+    "nbformat",
+    "matplotlib",
+    "plotly",
+    "polars",
+    "umap-learn",
+    "jupytext",
+]
+embeddings = ["torch", "sentence-transformers", "datasets", "python-dotenv"]
+dev = [
+    "bandit",
+    "commitizen",
+    "deptry",
+    "hypothesis",
+    "pre-commit",
+    "pyright",
+    "pytest",
+    "pytest-cov>=7.1.0",
+    "ruff",
+    "scipy-stubs",
+    "vulture",
+]
+
+[tool.uv.pip]
+torch-backend = "auto"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/intelliant"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/intelliant"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+# NPY: numpy-specific rules (legacy seeding, deprecated aliases).
+# PT: pytest style - keeps the growing suite uniform.
+# D (pydocstyle, google) is deliberately NOT enabled yet: docstrings are
+# stripped until ROADMAP 0.4; turn it on when that phase starts.
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT"]
+
+[tool.ruff.lint.per-file-ignores]
+"notebooks/**" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.pyright]
+include = ["src/intelliant"]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# tests/ on the path so test modules can import the shared factories from
+# conftest (see tests/conftest.py for why the baseline lives in one place).
+pythonpath = [".", "tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+# --strict-markers: a typo'd marker fails instead of silently doing nothing.
+# --strict-config: an unknown ini key fails instead of being ignored.
+addopts = "-m 'not slow' --strict-markers --strict-config"
+markers = ["slow: marks tests as slow (deselect with -m 'not slow')"]
+# The zero-warning rule is enforced here, not by discipline: every expected
+# warning must go through pytest.warns.
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["src/intelliant"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# numba compiles @njit bodies away from the tracer, so they read as 0% even
+# though every test executes them. Excluding the decorator line drops the whole
+# decorated block, which keeps the number meaningful instead of pessimistic.
+exclude_also = ["@njit"]
+# Actual coverage is 99%; 95 leaves room for new code to land while still
+# catching a genuinely untested chunk. Enforced on push, not on every run -
+# see .pre-commit-config.yaml.
+fail_under = 95
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0a2"
+version_files = [
+    "pyproject.toml:version",
+    "src/intelliant/__init__.py:__version__",
+]
+tag_format = "v$version"
+annotated_tag = true
