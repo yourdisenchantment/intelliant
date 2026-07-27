@@ -1,20 +1,22 @@
 # Intelliant
 
-ACO-based clustering (`0.1.0a2`, Python 3.14, scipy CSR + numba `@njit`).
-Stage history: `tmp/OVERVIEW.md`. Long-term ideas: `RESEARCH_NOTES.md`.
+ACO-based clustering (`0.2.0a1`, Python 3.14, scipy CSR + numba `@njit`).
 
 ## Start here
 
-- Active tasks -> `tmp/TASK.md` (active items only, status `[ ]`/`[~]`/`[x]`/`[!]`; archive in `ROADMAP.md`).
-- What's done -> `tmp/OVERVIEW.md`. Last verdict -> `tmp/REVIEW.md`.
-- Architecture/commands/workflow -> this file.
+- Architecture, commands, branch and release rules -> this file.
+- How to contribute, and the same rules for humans -> `CONTRIBUTING.md`.
+- Docstring conventions the linter cannot check -> `DOCSTRINGS.md`.
+- What changed and what broke -> `CHANGELOG.md`.
 
-`tmp/TASK.md` and `tmp/REVIEW.md` are local working artifacts, gitignored. They are absent from git history by design.
+Working notes live under `tmp/`, which is gitignored: task specs, review
+verdicts, and commit drafts. They are absent from git history by design, so
+do not link to them from anything that ships.
 
 ## Commands
 
 ```bash
-uv sync --all-groups --all-extras          # installs dev (ruff, pyright, pytest, scipy-stubs, ...), notebooks, embeddings (torch auto-backend)
+uv sync --all-groups --all-extras          # ALL of it: a bare `uv sync` gives runtime deps only - no ruff, pyright, pytest or pre-commit
 uv run ruff check src/                     # lint
 uv run pyright src/intelliant              # typecheck (0 errors = OK)
 uv run pytest tests/                       # all tests
@@ -37,11 +39,15 @@ Coverage lives in the hook rather than in `addopts` so running one test file is
 not gated by `fail_under`. Numba `@njit` bodies are excluded from coverage - the
 tracer cannot see compiled code, so counting them understates the real number.
 
-### Release checklist (not automated - run by hand before a tag)
+### Release gate
+
+These used to be a checklist people remembered; CI now runs them on every push
+to `main`. Reach for them by hand only when checking before that push:
 
 ```bash
 uv run pytest tests/ -m slow               # the 50k scale test, excluded by default
 uv run deptry .                            # dependency hygiene
+uv run ruff check --select DOC --ignore DOC502 --preview src/
 ```
 
 `bandit` and `vulture` are installed but deliberately unwired: low signal on a
@@ -128,8 +134,16 @@ passed explicitly - commitizen would otherwise derive it from the history,
 and a single `feat!` would land 1.0.0 early:
 
 ```bash
-uv run cz bump 0.2.0a1
+uv run cz bump --yes 0.2.0a1
+uv lock                       # the lock carries the project version too
+git add uv.lock && git commit --amend --no-edit
 ```
+
+Two traps, both hit on the first release. `uv.lock` records this project's
+version, so a bump leaves it stale and CI's `uv sync --frozen` refuses a lock
+that disagrees with `pyproject.toml` - after the tag already exists. And
+without `--yes`, commitizen asks whether this is the first tag and waits
+forever in a non-interactive shell.
 
 Order matters and is not negotiable:
 
@@ -199,7 +213,7 @@ No unified pipeline: three classes called sequentially, each independently.
 
 ## Tests
 
-- `tests/` — pytest, 307 tests (306 default + 1 slow). Config in `pyproject.toml` `[tool.pytest.ini_options]`.
+- `tests/` — pytest, 348 tests (347 default + 1 slow). Config in `pyproject.toml` `[tool.pytest.ini_options]`.
 - Coverage: constructor validation, edge cases, dtype, degenerate end-to-end, warnings, error message coverage (all 52 ValueError sites), tie-breaking determinism, threshold integration, property-based invariants (hypothesis), scale smoke (50k, slow marker).
 - LSP diagnostics in `tests/` are expected: tests deliberately pass invalid types to check validation. Pyright `include` is `src/intelliant` only, not `tests/`.
 - The default run must stay at ZERO pytest warnings; every expected warning goes through `pytest.warns`.
@@ -286,7 +300,15 @@ Purpose taxonomy (keep in mind when designing runs):
 
 ## Workflow cycle (`tmp/TASK.md` <-> `tmp/REVIEW.md`)
 
-- `tmp/TASK.md` holds **only active items** (one stage). Archive goes to `ROADMAP.md`.
-- Coder takes **one item at a time**, writes a report under it, marks `[~]`. Final status (`[x]` OK / `[!]` NEEDS_WORK) is set by reviewer.
-- Reviewer writes a section "Проверка правки <X>" in `tmp/REVIEW.md` per item.
-- After all items: final summary verdict in `tmp/REVIEW.md`.
+Both files are gitignored working state, not part of the repository.
+
+- `tmp/TASK.md` holds **only active items**, one stage at a time. Finished
+  stages move out of it rather than accumulating.
+- The coder takes **one item at a time**, writes a report under it and marks
+  it `[~]`. Only the reviewer sets the final status: `[x]` for done, `[!]`
+  for needs work.
+- The reviewer writes one section per item in `tmp/REVIEW.md`, then a summary
+  verdict once every item is covered.
+- Report findings you reproduced, not findings you inferred from reading. Two
+  of eleven in the last round were withdrawn because the tests proved the
+  review wrong.

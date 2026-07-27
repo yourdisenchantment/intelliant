@@ -1,6 +1,6 @@
 * text=auto
 
-# Исходники и конфиги
+# Sources and configuration
 *.py    text eol=lf
 *.toml  text eol=lf
 *.yaml  text eol=lf
@@ -8,14 +8,14 @@
 *.cfg   text eol=lf
 *.ini   text eol=lf
 
-# Документация и данные
+# Documentation and data
 *.md    text eol=lf
 *.txt   text eol=lf
 *.csv   text eol=lf
 *.json  text eol=lf
 *.jsonl text eol=lf
 
-# Веб (на случай notebooks с экспортом)
+# Web assets, in case a notebook exports any
 *.js    text eol=lf
 *.css   text eol=lf
 *.html  text eol=lf
@@ -23,10 +23,10 @@
 # Jupyter
 *.ipynb text eol=lf
 
-# Локи - текст, но диффить не нужно
+# Lock files: text, but not worth diffing
 *.lock  text eol=lf -diff
 
-# Бинарники - не трогать
+# Binaries: leave alone
 *.png   binary
 *.jpg   binary
 *.jpeg  binary

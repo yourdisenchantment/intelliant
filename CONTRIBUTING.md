@@ -19,6 +19,12 @@ uv run pre-commit install --hook-type pre-push
 uv run pre-commit install --hook-type commit-msg
 ```
 
+**The flags matter.** A bare `uv sync` installs the runtime dependencies and
+nothing else - no ruff, no pyright, no pytest, no pre-commit - and the first
+thing you try will fail with a missing command rather than with anything
+informative. `--all-groups` brings in `dev`, `notebooks` and `embeddings`;
+`--all-extras` brings in the optional ones. CI runs the same line.
+
 The three hook stages are not optional: they are the same checks CI runs, and
 installing them locally means finding out in seconds rather than after a push.
 
@@ -104,8 +110,18 @@ Versions follow project MILESTONES rather than commit types, so the number is
 passed explicitly:
 
 ```bash
-uv run cz bump 1.0.0a1
+uv run cz bump --yes 0.2.0a1
+uv lock                       # the lock carries the project version too
+git add uv.lock && git commit --amend --no-edit
 ```
+
+`uv.lock` records the version of this project alongside its dependencies, so
+a bump leaves it stale. Left that way, CI fails immediately: `uv sync
+--frozen` refuses a lock that disagrees with `pyproject.toml`, and by then the
+tag exists. Re-lock and fold it into the bump commit.
+
+`--yes` because without it commitizen asks whether this is the first tag and
+waits forever in a non-interactive shell.
 
 Pushing the resulting `v*` tag triggers the release workflow, which builds and
 publishes to PyPI through Trusted Publishing (OIDC - no API tokens exist in
