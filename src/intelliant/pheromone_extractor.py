@@ -155,6 +155,7 @@ class PheromoneExtractor:
         beta: float,
         alpha: float,
         evaporation_rate: float,
+        evaporation_schedule: str,
         pheromone_deposit: float,
         initial_pheromone: float,
         tau_min: float,
@@ -180,6 +181,31 @@ class PheromoneExtractor:
         self.beta = _check_float("beta", beta, 0.0)
 
         self.evaporation_rate = _check_float("evaporation_rate", evaporation_rate, 0.0, 1.0)
+
+        # WHEN the whole pheromone matrix decays, which is not the same
+        # question as by how much.
+        #
+        # "step" - decay once per ant step, so `path_length` times per
+        #   iteration. The effective per-iteration decay is
+        #   `1 - (1 - evaporation_rate) ** path_length`: at rate 0.07 and
+        #   path_length 10 that is 0.516, not 0.07. It also weights the tail
+        #   of a walk over its start, since a deposit made at step k is
+        #   evaporated (path_length - k) more times before the iteration ends.
+        #   This is what the algorithm has always done.
+        #
+        # "iteration" - decay once, before the ants move, as Ant System and
+        #   MMAS do. Deposits within an iteration then carry equal weight.
+        #
+        # The two are NOT interchangeable and no value from the ACO
+        # literature transfers to "step". Which one is better here is an open
+        # question to settle by measurement on the synthetic datasets, not by
+        # argument: unlike TSP, a walk here is not a solution, so the
+        # iteration boundary carries no inherent meaning.
+        if evaporation_schedule not in {"step", "iteration"}:
+            raise ValueError(
+                f"evaporation_schedule must be one of {{'step', 'iteration'}}, got {evaporation_schedule!r}"
+            )
+        self.evaporation_schedule = evaporation_schedule
 
         self.use_node_density = _check_bool("use_node_density", use_node_density)
 
@@ -403,6 +429,11 @@ class PheromoneExtractor:
         prev_nodes = np.full(self.n_ants, -1, dtype=np.intp)
         alive = np.ones(self.n_ants, dtype=np.bool_)
 
+        # Before the ants move, so every deposit made during this iteration
+        # carries the same weight - the Ant System / MMAS ordering.
+        if self.evaporation_schedule == "iteration":
+            self.pheromone_matrix_.data *= 1.0 - self.evaporation_rate
+
         for _ in range(self.path_length):
             if not alive.any():
                 break
@@ -429,7 +460,8 @@ class PheromoneExtractor:
                 rng_states=rng_states,
             )
 
-            self.pheromone_matrix_.data *= 1.0 - self.evaporation_rate
+            if self.evaporation_schedule == "step":
+                self.pheromone_matrix_.data *= 1.0 - self.evaporation_rate
 
             if len(rows) > 0:
                 _update_edges(

@@ -25,6 +25,7 @@ REQUIRED_PHEROMONE = [
     "beta",
     "alpha",
     "evaporation_rate",
+    "evaporation_schedule",
     "pheromone_deposit",
     "initial_pheromone",
     "tau_min",

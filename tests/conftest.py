@@ -40,6 +40,9 @@ BASE_PHEROMONE: dict[str, Any] = {
     "beta": 2.0,
     "alpha": 1.0,
     "evaporation_rate": 0.1,
+    # "step" is what the library has always done; keeping it here means the
+    # new switch changes no existing test outcome.
+    "evaporation_schedule": "step",
     "pheromone_deposit": 0.1,
     "initial_pheromone": 2.0,
     "tau_min": 0.01,

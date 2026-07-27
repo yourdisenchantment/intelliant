@@ -11,8 +11,11 @@ Two complementary checks:
 
 1. ``test_value_error_message_style`` - a parametrized case per ``raise ValueError``
    branch; asserts the branch fires and that the message contains a known
-   substring. Together the cases trigger all 52 ``raise ValueError`` sites
-   across the four modules; the shared ``_validation`` helper messages
+   substring. Together the cases trigger every ``raise ValueError`` site
+   across the four modules. No count is quoted here on purpose: the previous
+   one said 52 and was stale by six sites within a few commits, which made the
+   file claim a completeness it no longer had. The shared ``_validation``
+   helper messages
    (``_check_int`` / ``_check_float`` / ``_check_bool``) are exercised via the
    constructor, per-call threshold and scan_thresholds cases.
 2. ``test_collect_errors_no_internal_name_leaks`` - a bulk collection that
@@ -352,6 +355,11 @@ CASES = [
         "pe_evaporation_rate_over",
         lambda g, pm: make_extractor(evaporation_rate=1.5, verbose=False),
         "evaporation_rate must be in range [0, 1], got 1.5",
+    ),
+    (
+        "pe_evaporation_schedule_unknown",
+        lambda g, pm: make_extractor(evaporation_schedule="per-ant", verbose=False),
+        "evaporation_schedule must be one of {'step', 'iteration'}",
     ),
     (
         "pe_node_density_gamma_neg",
