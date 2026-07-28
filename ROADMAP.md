@@ -241,6 +241,41 @@ The paper text is written fresh rather than adapted from the article -
 self-copied text is flagged by plagiarism checks. Check the target journal's
 preprint policy before the arXiv submission; it is usually permissive.
 
+**Otsu placement contaminates every comparison, and can masquerade as a
+parameter effect.** Found 2026-07-28 while checking a claim that turned out to
+be wrong, which is the reason it is recorded in full.
+
+`"iteration"` looked degenerate: at every decay level tested it returned the
+graph baseline with a seed spread of exactly zero, while `"step"` cleared the
+baseline. Two explanations were proposed and both were wrong - field
+saturation, which only holds at low rates, and an unequal number of feedback
+rounds, which more iterations made worse rather than better.
+
+Forcing the threshold by percentile instead of letting Otsu choose it settles
+it:
+
+| Schedule | p65 | p70 | p72 | p75 | p78 |
+|---|---|---|---|---|---|
+| step, rate 0.07 | 0.731 +/- 0.000 | 0.755 +/- 0.048 | **0.778 +/- 0.058** | 0.777 +/- 0.056 | 0.771 +/- 0.053 |
+| iteration, rate 0.516 | 0.731 +/- 0.000 | 0.731 +/- 0.000 | 0.731 +/- 0.000 | **0.753 +/- 0.045** | 0.750 +/- 0.047 |
+
+Both schedules work. Their useful windows sit at different percentiles - p72
+to p75 against p75 to p78 - and their peaks differ by 0.025, which is less
+than either seed spread. Otsu landed at p71.8 for step, inside its window, and
+at p68.5 for iteration, just below its own. That single fact produced the
+entire apparent difference.
+
+The general form matters more than the schedule: **a badly placed threshold
+makes any parameter look inert.** Every comparison that lets Otsu pick the
+cutoff is measuring whether Otsu happened to land well for that configuration,
+alongside whatever the parameter does. That includes the July conclusion that
+five of six parameters are flat - the flatness may have been Otsu's, not the
+parameters'.
+
+Consequence for the protocol: a sweep scans the threshold per configuration
+rather than accepting one cutoff. Comparing at a fixed method compares
+threshold luck.
+
 ## The forks, and what closes them
 
 Every fork in the library is there because the answer is not settled. Closing
@@ -251,7 +286,7 @@ and the removal recorded in CHANGELOG. Current state, with evidence as of
 | Fork | Evidence so far | Likely disposition |
 |---|---|---|
 | `metric` | euclidean 0.847 against cosine 0.421 on 2D blobs; inverts on embeddings with magnitude noise | **stays open** - the right answer depends on the data, with the rule documented |
-| `evaporation_schedule` | under `"iteration"` the cutoff lands at p11-p23 and the seed spread is exactly zero: the field saturates and the colony stops mattering | candidate for closing in favour of `"step"`, pending the full protocol |
+| `evaporation_schedule` | with the threshold scanned rather than chosen by Otsu, both work; their useful windows sit at different percentiles and their peaks differ by less than the seed spread | **stays open** - not shown to differ in quality |
 | `mutual` | 5 components either way, k from 5 to 400, no effect on the baseline on this data | undecided - needs a dataset where symmetrisation changes connectivity |
 | `use_node_density` | no gain over none under euclidean, within the seed spread; amplifies damage on a bad graph | candidate for closing, but see below |
 | `use_elite_ants` | same | candidate for closing, but see below |

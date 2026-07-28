@@ -167,6 +167,15 @@ region where the peak turned out to be. If the table has `n_neighbors` at 10,
 15 and 20, "did you try 50?" has no answer in it. Cover the plausible
 alternatives while the data is cheap, which on synthetic it is.
 
+**A parameter is compared at its own best threshold, not at one shared
+cutoff.** Otsu lands in different places for different configurations, and its
+useful window moves with them, so a sweep that fixes the threshold method is
+partly measuring where Otsu happened to land. Measured: two evaporation
+schedules looked completely different under Otsu - one clearing the baseline,
+one returning it with zero seed spread - and turned out to differ by less than
+the seed spread once the threshold was scanned for each. Scan the cutoff per
+configuration and compare the best each reaches.
+
 **A row is only evidence if it cleared its baseline.** An exhaustive table of
 scores that never beat the graph's own connected components documents nothing
 except that the pipeline ran. `ARI_over_baseline` is what makes a row
