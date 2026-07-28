@@ -53,6 +53,27 @@ the total deposit per iteration scales with it. The values above are not
 wrong, but they were established under conditions no real dataset shares, and
 re-confirmation at a realistic size is part of phase 1 rather than a formality.
 
+**The metric may invalidate more than the size does.** Measured 2026-07-28 on
+the first notebook: the whole calibration ran with `metric="cosine"` on 2D
+spatial blobs, and cosine measures angle from the origin. The blobs sit off
+the origin, so points inside one span a range of angles and their nearest
+neighbours by cosine are neighbours *by angle* - the graph becomes angular
+wedges and each blob is sliced into diagonal stripes.
+
+On the same 10000-point dataset: cosine gives 32 clusters at ARI 0.421,
+euclidean gives 6 at 0.847. Centring the data at the origin lifts cosine to
+0.513, moving it far away lifts it to 0.653 - the effect tracks the geometry
+exactly as an angular artifact should.
+
+Two consequences. The 0.77 plateau, and with it "five of six parameters are
+flat", may be properties of a graph that was wrong for the data rather than of
+the algorithm - which is consistent with the note above that the graph bounds
+everything downstream. And the already-merged blob pair in the KNN graph now
+has a candidate explanation. Cosine remains the right metric for embeddings,
+where direction carries the meaning; on spatial coordinates it is a category
+error. Re-running the base calibration under euclidean is now the first thing
+phase 1 does.
+
 **One finding needs re-reading.** All of the above was measured before the
 `evaporation_schedule` semantics came to light. Under `"step"` the field
 decays once per ant step, so changing `path_length` silently changes the
@@ -69,6 +90,9 @@ means, so any value calibrated before it is fixed is valid only for one
 schedule at one `path_length`. Calibrating anything else first means
 recalibrating it afterwards.
 
+- [ ] **`metric` on spatial data: euclidean versus cosine.** Comes first -
+      it changes the graph, and every other parameter is measured on top of
+      the graph. Indicative at one seed already; needs the full protocol.
 - [ ] `evaporation_schedule`: `"step"` versus `"iteration"`, base config
       otherwise held, full seed protocol. Settled by measurement.
 - [ ] Re-confirm the base configuration under the winning schedule.

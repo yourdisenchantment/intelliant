@@ -117,7 +117,12 @@ select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "RUF", "NPY", "PT", "ANN",
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"notebooks/**" = ["E402"]
+# Notebooks are jupytext scripts, not modules. D100 would demand a module
+# docstring from a file whose first cell IS the documentation, and E402 is
+# structural: the local import cannot precede the sys.path cell. Annotations
+# go unchecked here for the same reason as in tests - pyright's include is
+# src/intelliant only, so nobody would be reading them.
+"notebooks/**" = ["E402", "ANN", "D"]
 # Tests are outside pyright's include (they pass invalid types on purpose, to
 # exercise validation), so annotations there would be checked by nobody -
 # 324 lines of decoration rather than a stricter contract.
