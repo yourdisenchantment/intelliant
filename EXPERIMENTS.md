@@ -179,6 +179,50 @@ synthetic produced, verify they hold, and vary only what is shown not to
 transfer. A real-data sweep at synthetic width is unaffordable and, worse, it
 would answer questions that were already answered more cheaply.
 
+### Two purposes, two designs
+
+Synthetic data is used for two different things, and a dataset built for one
+answers the other badly.
+
+**Calibration** wants few datasets and many parameter values: controlled
+variation, the full seed set, realistic size. The output is a number with a
+window around it.
+
+**Demonstration of versatility** wants many geometries and one configuration -
+the calibrated one, held fixed. Varying parameters per dataset would defeat
+the claim, which is precisely that a single setting copes with shapes that
+break other methods. The output is a table across datasets, not a window.
+
+**A versatility demonstration without baselines proves nothing.** Moons and
+concentric circles are famous as the counterexample to k-means, not to
+density-based methods - DBSCAN and HDBSCAN handle both routinely, and they are
+the textbook illustrations of that. A table showing this library scoring well
+on moons, with nothing beside it, says only that the reader should go look up
+what HDBSCAN scores. Every versatility run therefore carries the baselines on
+the same data, the same seeds and the same metric convention.
+
+That also disciplines the claim. Parity with density methods on the classic
+shapes is the honest expected result and is worth stating plainly; the
+distinguishing argument for the flat version is the inspectable staged
+pipeline, and the stronger one belongs to the multilevel version. Overstating
+a shape that HDBSCAN also solves costs credibility that the real arguments
+then have to buy back.
+
+The geometries worth covering divide accordingly:
+
+| Family | Breaks | Expected here |
+|---|---|---|
+| moons, circles | centroid methods | parity with density methods |
+| anisotropic, elongated | k-means, sensitive to metric | parity |
+| unequal cluster sizes | k-means | parity |
+| **varying density** | DBSCAN's single `eps` | the interesting case |
+| **bridged / touching clusters** | most methods | a known weakness here - see the graph note in ROADMAP |
+| **nested, hierarchical** | flat methods generally | where the multilevel version is aimed |
+
+The bold rows are the ones worth spending time on. The first three are
+expected in a paper and cheap to produce, but they are table stakes rather
+than evidence.
+
 ### What actually transfers
 
 Being clear about this is what makes the synthetic phase worth its time.
