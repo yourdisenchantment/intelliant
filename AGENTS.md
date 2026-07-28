@@ -274,6 +274,7 @@ remembers why it was put there.
 | `utils/` | helpers the notebooks import; not part of the package | yes |
 | `notebooks/` | notebooks and their run output, no instructions about themselves | `.ipynb` and `.py` yes, `output.txt` and `checkpoints/` no |
 | `results/` | what a publication needs: tables and the figures built from them | CSV and JSON yes, figures no |
+| `literature/` | the source record and the search log behind it | yes |
 | `data/` | datasets and embeddings, prepared once and reused | no |
 | `tmp/` | working files for the maintainer and the agent, high rotation | no |
 | `.github/` | CI, release workflow, issue and PR templates | yes |

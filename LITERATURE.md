@@ -29,6 +29,42 @@ every source so the results form a table rather than a set of summaries. If a
 source raises a question worth adding to the list, add it and say so - do not
 answer it silently for that source alone.
 
+## Where it goes
+
+```
+literature/SOURCES.md      cumulative, one entry per source
+literature/SEARCH_LOG.md   cumulative, one dated section per pass
+literature/QUESTIONS.md    what the current pass needs from the maintainer
+```
+
+Versioned, for the same reason results are: losing the search log costs more
+than losing the sources, because the log is what makes a negative result an
+argument rather than an assertion. A pass appends; it does not overwrite.
+
+## Access, and what to do when a source is behind something
+
+Most of what matters is not on the open web. Three cases, and they are
+handled differently.
+
+**Paywalled by a publisher.** The in-app browser has no institutional session.
+Anything requiring one has to run through the maintainer's own browser, where
+those sessions already exist. Say so and hand it over rather than settling for
+the abstract - "abstract only" is a permanent weakness in the record, and one
+retrieval fixes it.
+
+**Behind a CAPTCHA.** Do not attempt it, do not route around it, and do not
+look for a mirror that happens to skip it. Record the URL and the fact that it
+was blocked, and hand it to the maintainer, who can open it in their own
+session and pass back the text.
+
+**Not digitised.** Pre-web conference proceedings often exist only on paper or
+in a library system. Record what is known, mark the depth as second-hand, and
+say plainly that a primary citation needs a library.
+
+The rule underneath all three: an inaccessible source is recorded as
+inaccessible. It is never approximated from what cites it and then written up
+as though it had been read.
+
 ## What gets recorded, per source
 
 ```
