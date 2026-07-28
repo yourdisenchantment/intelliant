@@ -320,7 +320,7 @@ The protocol - metrics, seeds, notebook layout, what is kept - is in
 2. **Agent converts it**, and never afterwards edits the `.ipynb` by hand -
    the two would silently diverge and the `.py` is what gets read:
    ```bash
-   uv run jupytext --to ipynb notebooks/<group>/<dataset>/<clusterer>/<name>.py
+   uv run jupytext --update --to ipynb notebooks/<group>/<dataset>/<clusterer>/<name>.py
    ```
 3. **Hand off. The maintainer runs the notebook.** Do not ask for output to be
    pasted, and do not ask what the plots showed unless the question is about

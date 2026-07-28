@@ -446,7 +446,7 @@ checkpoints:
 
 ```
 notebooks/2d/blobs/intelliant/
-    blobs_intelliant.ipynb      committed WITH executed output
+    blobs_intelliant.ipynb      generated; carries output once settled
     blobs_intelliant.py         jupytext source, the reviewed artifact
     output.txt                  run log, gitignored
     checkpoints/                gitignored
@@ -524,6 +524,16 @@ can check.
 
 A notebook is written once but used in two phases, and confusing them fills
 the repository with noise.
+
+Regenerate with `--update`:
+
+```bash
+uv run jupytext --update --to ipynb <notebook>.py
+```
+
+Without it jupytext rewrites every cell id on conversion, so a notebook that
+did not change produces a diff that says it did - and once that happens twice
+nobody reads the diff again.
 
 **While searching.** Parameters are not settled. Print machine-readable
 tables, write `runs.csv`, wrap the run in `utils.Tee` so it lands in
