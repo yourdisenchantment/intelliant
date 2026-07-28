@@ -294,6 +294,7 @@ wrong got that way by being written down twice.
 | `AGENTS.md` | what the code is, and how the agent operates | agent |
 | `DOCSTRINGS.md` | docstring conventions a linter cannot check | whoever writes one |
 | `EXPERIMENTS.md` | metrics, seeds, notebook layout, what is kept | whoever runs a notebook |
+| `LITERATURE.md` | how a literature search is run and recorded | whoever runs one |
 | `ROADMAP.md` | what remains before 1.0.0, and what is already established | everyone |
 | `RESEARCH_NOTES.md` | ideas outside the roadmap; the multilevel scheme | future work |
 | `CHANGELOG.md` | what changed per release | user |
