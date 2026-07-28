@@ -408,6 +408,21 @@ isotropic and equally dense. Embedding clusters are none of those. The
 non-convex datasets in phase 1 exist for exactly this reason and are not
 decoration.
 
+**Neither does the metric, and this one inverts.** Cosine discards vector
+length and keeps direction, so it wins where the length is nuisance -
+embeddings, where the norm tracks document length rather than meaning - and
+loses where position is the meaning. On 2D blobs it slices each cluster into
+angular wedges; on 512-dimensional embeddings it is the right choice.
+Calibrating the metric on synthetic 2D therefore produces the opposite of the
+right answer for real data. It is settled separately on each, and the rule -
+cosine when direction carries the signal, euclidean when position does -
+predicts which, so a run confirms it rather than searching for it. Measured;
+see ROADMAP.
+
+That makes the metric the sharpest example of why the transfer question is
+asked at all. It determines the graph, every other parameter is measured on
+top of the graph, and it is exactly the parameter that does not carry over.
+
 ### Measure one run before launching a sweep
 
 Runtime is already a recorded column; use it. Time a single run at the target

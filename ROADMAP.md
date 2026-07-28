@@ -53,26 +53,81 @@ the total deposit per iteration scales with it. The values above are not
 wrong, but they were established under conditions no real dataset shares, and
 re-confirmation at a realistic size is part of phase 1 rather than a formality.
 
-**The metric may invalidate more than the size does.** Measured 2026-07-28 on
-the first notebook: the whole calibration ran with `metric="cosine"` on 2D
-spatial blobs, and cosine measures angle from the origin. The blobs sit off
-the origin, so points inside one span a range of angles and their nearest
-neighbours by cosine are neighbours *by angle* - the graph becomes angular
-wedges and each blob is sliced into diagonal stripes.
+**The metric has to match what carries the meaning.** Measured 2026-07-28 on
+the first notebook and then isolated across four conditions. Same pipeline,
+same parameters; only the data and the metric change:
 
-On the same 10000-point dataset: cosine gives 32 clusters at ARI 0.421,
-euclidean gives 6 at 0.847. Centring the data at the origin lifts cosine to
-0.513, moving it far away lifts it to 0.653 - the effect tracks the geometry
-exactly as an angular artifact should.
+| Data | euclidean | cosine |
+|---|---|---|
+| 2D blobs, as generated | **0.731** (5 clusters) | 0.695 (8) |
+| 2D blobs, L2-normalised onto the unit circle | **0.791** (13) | 0.695 (8) |
+| 256D on the unit sphere, direction is the signal | 1.000 (7) | 1.000 (7) |
+| ...the same, with per-point magnitude noise x[0.2, 5] | 0.965 (10) | **1.000** (7) |
 
-Two consequences. The 0.77 plateau, and with it "five of six parameters are
-flat", may be properties of a graph that was wrong for the data rather than of
-the algorithm - which is consistent with the note above that the graph bounds
-everything downstream. And the already-merged blob pair in the KNN graph now
-has a candidate explanation. Cosine remains the right metric for embeddings,
-where direction carries the meaning; on spatial coordinates it is a category
-error. Re-running the base calibration under euclidean is now the first thing
-phase 1 does.
+Cosine discards vector length and keeps direction, so which metric wins
+depends entirely on which of the two carries the signal.
+
+**On embeddings the length is nuisance** - direction encodes semantics while
+the norm tracks document length, token counts, tokenizer artifacts - so
+discarding it is exactly right. Rows three and four isolate this: on the unit
+sphere the two metrics are monotonically equivalent and give identical
+results, but add a spread of magnitudes and euclidean drops to 0.965 while
+cosine holds at 1.000. This is why cosine outperformed euclidean on the
+earlier text-embedding work.
+
+**On spatial blobs the position is the meaning** - a point is defined by both
+its angle and its distance from the origin - so cosine throws away half the
+information and identifies everything lying on one ray. The blobs sit off the
+origin, points inside one span a range of angles, and their nearest neighbours
+by cosine are neighbours *by angle*: the graph becomes angular wedges and each
+blob is sliced into diagonal stripes.
+
+**The rule, which predicts rather than records:** cosine when direction
+carries the meaning and magnitude is nuisance; euclidean when the meaning is
+position. They coincide on L2-normalised data.
+
+**The artifact scales with sampling density.** At N=4000 the gap is 0.731
+against 0.695; at N=10000 it is 0.847 against 0.421. Denser sampling narrows
+the angular sector that the fifteen nearest neighbours occupy, so the wedges
+get thinner and more numerous. A metric choice validated at one size can fail
+at another.
+
+Two consequences for the earlier work. The 0.77 plateau, and with it "five of
+six parameters are flat", may be properties of a graph that was wrong for the
+data rather than of the algorithm - consistent with the note above that the
+graph bounds everything downstream. And the already-merged blob pair now has a
+candidate explanation.
+
+**The metric does not transfer, and calibrating it on synthetic 2D would give
+the opposite of the right answer for real data.** That is sharper than the
+existing "dimensionality does not transfer": the metric determines the graph
+that every other parameter is measured on top of. Phase 1 calibrates under
+euclidean and carries none of that choice to the text datasets, where it is
+settled again - the rule above says what the answer will be, and the run has
+to confirm it rather than assume it.
+
+**Heuristics: nothing demonstrated on a good graph, damage on a bad one.**
+Same notebook, four heuristic sets across five seeds, 10000 points.
+
+Under euclidean: none 0.778, density 0.794, elite 0.752, both 0.764, with a
+seed spread of 0.05 to 0.06 within each. Every difference between the sets is
+smaller than the spread inside them, so on this dataset no heuristic has been
+shown to do anything - which is what the July work concluded from a different
+direction.
+
+Under cosine they are actively harmful, and the worse the metric fits the more
+damage they do: none 0.485, elite 0.311, density 0.158, both 0.145. Density
+takes the partition from 25 clusters to 102. On a graph built by angle the
+density heuristic steers ants toward high-degree vertices, which means further
+into the wedges - it amplifies the error rather than compensating for it.
+
+Worth carrying forward: a heuristic that looks inert on good data is not
+therefore harmless. It may be what decides how badly a bad graph fails. One
+variation, one dataset - indicative, not established.
+
+`use_no_return` is on by default, was on in every run ever made here, and has
+never been measured. It is a third heuristic axis held silently rather than an
+absent one.
 
 **One finding needs re-reading.** All of the above was measured before the
 `evaporation_schedule` semantics came to light. Under `"step"` the field
@@ -85,10 +140,12 @@ much in that range, not evidence the two parameters are independent.
 
 ## Phase 1 - synthetic calibration -> `1.0.0a1`
 
-**Settle `evaporation_schedule` first.** It changes what `evaporation_rate`
-means, so any value calibrated before it is fixed is valid only for one
-schedule at one `path_length`. Calibrating anything else first means
-recalibrating it afterwards.
+**Order matters here, and it is not the order things were discovered in.**
+The metric comes first because it determines the graph, and every other
+parameter is measured on top of whatever graph it produces. The evaporation
+schedule comes second because it changes what `evaporation_rate` means - any
+value calibrated before it is fixed is valid only for one schedule at one
+`path_length`. Anything calibrated ahead of these two gets recalibrated.
 
 - [ ] **`metric` on spatial data: euclidean versus cosine.** Comes first -
       it changes the graph, and every other parameter is measured on top of
