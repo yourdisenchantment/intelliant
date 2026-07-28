@@ -155,6 +155,111 @@ Record the grid in the results file the same as any other parameter. A table
 that shows which value won but not which values were offered cannot be read
 later - "the best of three" and "the best of six" are different claims.
 
+## What is actually being searched
+
+Everything the calibration can move, grouped by role. A parameter that is
+fixed is fixed for a stated reason, and the reason is part of the record.
+
+### Fixed by decision
+
+| Parameter | Value | Why |
+|---|---|---|
+| `metric` | `"cosine"` | Touches the whole pipeline - graph, weights, absorption - so varying it multiplies every other axis. Worth one pass early to confirm the choice, then held. |
+| `evaporation_schedule` | settled first | Changes what `evaporation_rate` means. Fixed before anything else is calibrated. |
+| algorithm seeds | `1, 10, 100, 1000, 10000` | Fixed repository-wide so runs stay comparable. |
+| `n_ants` | `N` | Set from the dataset rather than searched. |
+
+### Graph
+
+| Parameter | Notes |
+|---|---|
+| `n_neighbors` | Held at 15 through all previous work and never probed. Bounds everything downstream. |
+| `mutual` | AND vs OR symmetrisation. Changes connectivity, so it interacts with `n_neighbors`. |
+| `min_connections` | Connectivity top-up after symmetrisation. |
+
+### Colony
+
+| Parameter | Notes |
+|---|---|
+| `n_iterations` | Previously 20; +0.004 up to 50, not worth 2.5x the cost. |
+| `path_length` | Under `"step"` it moves the effective decay - not independent of evaporation. |
+| `beta` | Edge weight exponent. Measured flat. |
+| `alpha` | Pheromone exponent. Field-shaping; flat once evaporation was fixed. |
+| `evaporation_rate` | The only lever found so far. Peak bracketed at 0.07. |
+| `pheromone_deposit` | Measured flat. |
+| `initial_pheromone` | Suspected of interacting with `alpha`. |
+| `tau_min`, `tau_max` | MMAS clamps. `tau_max` suspected of interacting with `alpha`; the `tau_min` spike is the real-data failure face. |
+
+### Heuristic switches
+
+**There are three, not two**, and one of them is on by default:
+
+| Switch | Default | Sub-parameters |
+|---|---|---|
+| `use_node_density` | off | `node_density_gamma` |
+| `use_elite_ants` | off | `elite_ratio`, `elite_multiplier`, `elite_start_iteration` |
+| `use_no_return` | **on** | none |
+
+The 2x2 over density and elite gives the four sets a calibration pass reports
+on: neither, density only, elite only, both. `use_no_return` has been on in
+every run ever made here, which means its contribution has never been
+measured - it is a third axis silently held, not an absent one. Worth one
+deliberate pass rather than continued assumption.
+
+A switch turned on drags its sub-parameters into the grid with it. Enabling
+elite ants adds three, so the cost of the "both" cell is not comparable to the
+cost of the "neither" cell.
+
+### Threshold
+
+| Parameter | Notes |
+|---|---|
+| `method` | `otsu`, `percentile`, `stat`. Scan-based methods are phase 2. |
+| `percentile` | Used by `method="percentile"`. |
+| `k` | Used by `method="stat"`. |
+| `bins` | Otsu histogram resolution; minimum 2. |
+
+Also available on `fit_predict`: `threshold_value` or `threshold_percentile`
+directly, which is how a scan around the chosen cutoff is run without
+recomputing the field.
+
+### Clustering
+
+| Parameter | Notes |
+|---|---|
+| `max_iterations` | Absorption passes. |
+| `gap_ratio`, `max_gap_rank` | Giant detection. Pairwise merges slip under a ratio of 3.0. |
+| `min_cluster_size` | Smallest component counting as a core. |
+| `batch_size` | Centroid fallback batching. Cost only. |
+| `absorb_isolated` | Whether isolated points are absorbed at all. |
+
+### Not parameters
+
+The noise convention in ARI is **not** a search axis. `ARI_all` leads and
+`ARI_assigned` is reported beside it, both always. Choosing between them per
+run would mean selecting the metric that flatters the result, which is the
+one thing a fixed convention exists to prevent.
+
+`verbose`, `warmup`, `knn_method`, `approx_threshold` are infrastructure and
+do not shape the result.
+
+## What to display
+
+A calibration pass produces more runs than anyone can look at, and the point
+of looking is to see shape, not to audit rows.
+
+**Four grids per pass, one per heuristic set** - neither, density only, elite
+only, both - each the best run in its set by `ARI_all`. That is a constant
+four regardless of how large the grid was, which is what keeps the output
+readable as the sweep grows.
+
+Print the full results table as well; it is machine-readable and the agent
+reads it. The four grids are for the eye, and the eye needs a fixed number of
+things to compare.
+
+If a set is empty because the switch was not varied in that pass, say so
+rather than silently showing three.
+
 ## Scale, and what transfers
 
 Synthetic and real data are searched under different budgets, and that
