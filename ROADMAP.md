@@ -241,6 +241,38 @@ The paper text is written fresh rather than adapted from the article -
 self-copied text is flagged by plagiarism checks. Check the target journal's
 preprint policy before the arXiv submission; it is usually permissive.
 
+## The forks, and what closes them
+
+Every fork in the library is there because the answer is not settled. Closing
+one is a publication-grade claim, so it needs the data behind it recorded here
+and the removal recorded in CHANGELOG. Current state, with evidence as of
+2026-07-28:
+
+| Fork | Evidence so far | Likely disposition |
+|---|---|---|
+| `metric` | euclidean 0.847 against cosine 0.421 on 2D blobs; inverts on embeddings with magnitude noise | **stays open** - the right answer depends on the data, with the rule documented |
+| `evaporation_schedule` | under `"iteration"` the cutoff lands at p11-p23 and the seed spread is exactly zero: the field saturates and the colony stops mattering | candidate for closing in favour of `"step"`, pending the full protocol |
+| `mutual` | 5 components either way, k from 5 to 400, no effect on the baseline on this data | undecided - needs a dataset where symmetrisation changes connectivity |
+| `use_node_density` | no gain over none under euclidean, within the seed spread; amplifies damage on a bad graph | candidate for closing, but see below |
+| `use_elite_ants` | same | candidate for closing, but see below |
+| `use_no_return` | on by default, on in every run ever made, never measured | must be measured before anything is concluded about the other two |
+| threshold `method` | Otsu lands in the useful window only sometimes; a scan-based method is phase 2 | stays open, with a new option arriving |
+
+**The heuristics cannot be closed on current evidence.** They were tested on
+one dataset where the graph almost solves the problem unaided, so there was
+little room for anything to help. A heuristic that adds nothing when there is
+nothing to add has not been shown to be useless. They need the harder
+geometries first.
+
+**A fork that closes is a chapter, not a deletion.** The reason one option
+lost is the part that survives into the article; the removal is the
+consequence. That is why the sweeps are kept whole rather than reduced to
+their winners - see EXPERIMENTS.md on the grid as evidence.
+
+The end state for `1.0.0` is not one option per fork. It is that no parameter
+remains whose value could have been derived from the data, and none whose
+alternatives are never the right answer.
+
 ## Deferred
 
 - Giant-component handling, phases 1-2. Needs its own threshold calibration,

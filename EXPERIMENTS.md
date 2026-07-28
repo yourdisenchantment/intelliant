@@ -148,6 +148,50 @@ deviation of 0.083.
 If five seeds make a grid too slow, cut the grid, not the seeds. A wide grid
 measured on one seed answers nothing.
 
+## The grid is the evidence, not scaffolding
+
+The tables are not a means of finding good values that gets thrown away
+afterwards. They are the justification for every choice the library ends up
+making, and they are kept in full for that reason.
+
+The question a reviewer asks is not "what did you pick" but "why, and what
+else did you try". A run that answers only the first is a claim; a table that
+answers both is evidence. So a sweep is preserved as it was run - every
+configuration, every seed, winners and losers together - rather than reduced
+to the row that won.
+
+**This changes how wide a grid should be.** The three passes above narrow in
+order to find an optimum cheaply. Width for evidence is a different criterion:
+the exploration pass has to cover what someone will ask about, not only the
+region where the peak turned out to be. If the table has `n_neighbors` at 10,
+15 and 20, "did you try 50?" has no answer in it. Cover the plausible
+alternatives while the data is cheap, which on synthetic it is.
+
+**A row is only evidence if it cleared its baseline.** An exhaustive table of
+scores that never beat the graph's own connected components documents nothing
+except that the pipeline ran. `ARI_over_baseline` is what makes a row
+admissible; sort and filter on it before drawing any conclusion from a sweep.
+
+**The forks in the library are the apparatus.** Keeping `evaporation_schedule`
+as an explicit switch rather than picking one is what makes the comparison
+possible at all, and the same holds for the metric, the symmetrisation and the
+heuristic flags. They stay open until the evidence closes them, and closing
+one means recording which alternative lost and on what data - in ROADMAP as an
+established finding, in CHANGELOG as a user-visible change.
+
+Two kinds of closure, and they are different:
+
+- **A fork closes** when one option is wrong everywhere tested. The parameter
+  is removed, and the reason it was removed is the published justification.
+- **A fork stays open** when the right answer depends on the data. The metric
+  is the clear case: euclidean for spatial coordinates, cosine for embeddings,
+  and no single default is correct. It remains a parameter, but a documented
+  one with a rule attached rather than a value nobody chose.
+
+The end state is not "one option per fork". It is that no parameter survives
+whose value could have been derived, and none whose alternatives are never
+right.
+
 ## Parameter grids
 
 A sweep narrows in three passes. Skipping the first produces a confident
