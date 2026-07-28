@@ -59,10 +59,15 @@ Every run records:
 - the largest ratio between neighbouring ranks, and where it sits;
 - the largest cluster as a share of assigned points.
 
-Most of this already exists: `CoreClusterer` attaches a `GiantDiagnostics`
-with `n_clusters`, `top_sizes`, `median`, `max_gap`, `gap_pos` and
-`suspected`. Record what it reports rather than recomputing it - a second
-implementation of the same statistic is a second thing that can disagree.
+The library computes most of this internally - `GiantDiagnostics` carries
+`n_clusters`, `top_sizes`, `median`, `max_gap`, `gap_pos` and `suspected` -
+but **there is no public way to obtain one**. The type is exported in
+`__all__`, the value is built by a private method, and its numbers reach the
+user only by being printed under `verbose`. Until that is fixed the notebooks
+compute the block themselves, which is a second implementation of one
+statistic and therefore a second thing that can disagree with the first. The
+local helper is a stopgap and should be deleted, not kept in parallel, once
+the clusterer exposes the diagnostics it already builds.
 
 This block carries the weight on real data, where the spatial figures are
 meaningless and the size distribution is the whole picture. A giant component
