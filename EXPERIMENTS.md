@@ -170,8 +170,8 @@ directories - `parents[3]` breaks the day a folder level is added:
 PROJECT_ROOT = next(p for p in Path.cwd().resolve().parents if (p / "pyproject.toml").exists())
 ```
 
-Results go to the path that mirrors this notebook, so a table traces back to
-the run: `PROJECT_ROOT / "results" / <group> / <dataset> / <clusterer>`.
+Results go to `PROJECT_ROOT / "results" / <group> / <dataset> / <clusterer>`,
+mirroring this notebook's own path.
 
 **Pipeline**
 
@@ -209,17 +209,17 @@ the repository with noise.
 
 **While searching.** Parameters are not settled; the output exists for the
 agent to read. Print machine-readable tables, write `runs.csv`, wrap the run
-in `utils.Tee` so it lands in `output.txt`. Do not produce figures - they are
-read by nobody at this stage and cost megabytes. Do not commit the executed
+in `utils.Tee` so it lands in `output.txt`. Do not produce figures - nothing is
+settled enough to be worth drawing, and every one of them is redrawn once it
+is. Do not commit the executed
 `.ipynb` on every iteration either: the `.py` is what changes, and a rerun of
 a sweep is not a revision worth keeping. Iterate on the `.py`, and let
 `output.txt` be the deliverable the agent works from.
 
 **Once the values are settled.** The run becomes the record. Execute the
-notebook a final time, commit the `.ipynb` **with its output** - that is the
-showcase on GitHub - and write the full results to `results/`: tables as
-CSV/JSON, and now the figures, which is the one point at which they are worth
-producing.
+notebook a final time, commit the `.ipynb` with its output, and write the full
+results to `results/`: tables as CSV/JSON, and now the figures, which is the
+one point at which they are worth producing.
 
 A document on how those results are then read - which comparisons are
 meaningful, how to present them - belongs with the article work, not here. It
@@ -285,20 +285,6 @@ sizes, the giant share. On 512-dimensional embeddings that is the result.
 - **Colourblind-safe palette**, and readable at the size a paper prints.
 - PNG, at a DPI that survives a zoom.
 
-### Where they go
-
-```
-results/<group>/<dataset>/<clusterer>/
-    runs.csv          versioned
-    summary.json      versioned
-    figures/          NOT versioned
-```
-
-Figures are derived from the tables and cost megabytes; the tables are a few
-kilobytes and expensive to reproduce. That asymmetry is why one is in git and
-the other is not, and why the tables must carry every parameter - a figure can
-always be redrawn from them, but a rerun cannot be recovered from a figure.
-
 ## What is kept
 
 `results/` holds what a publication needs: the tables, and the figures built
@@ -312,16 +298,28 @@ from them.
 | figures | `results/<...>/figures/` | no |
 | datasets and embeddings | `data/<dataset>/` | no |
 
-`.ipynb` are committed with their output on purpose - they are the showcase on
-GitHub, and a notebook whose results you cannot see proves nothing - but only
-once the values are settled. See the two modes below.
+Mirror the notebook path under `results/`, so a table traces back to the run
+that produced it:
 
-Figures are the one deliberate exception among publication artifacts. A run's
-numbers are a few kilobytes and expensive to reproduce; figures are derived
-from those numbers and cost megabytes. The previous repository reached 425 MB
-that way and its history had to be rewritten to recover.
+```
+results/2d/blobs/intelliant/
+    runs.csv          versioned
+    summary.json      versioned
+    figures/          not versioned
+```
 
-Mirror the notebook path under `results/` so a table traces back to the run
-that produced it. The rules are in `.gitignore` under `results/**` - note the
-`**`, since with a plain `results/` git never descends into the directory and
-the negations below it would silently do nothing.
+Figures are the one deliberate exception among publication artifacts, and the
+asymmetry is the reason. A run's numbers are a few kilobytes and expensive to
+reproduce; figures are derived from those numbers and cost megabytes - the
+previous repository reached 425 MB that way and its history had to be
+rewritten to recover. A figure can always be redrawn from the tables, but a
+rerun cannot be recovered from a figure, which is also why the tables must
+carry every parameter.
+
+`.ipynb` are committed with their output - they are the showcase on GitHub,
+and a notebook whose results you cannot see proves nothing - but only once the
+values are settled, per the two modes above.
+
+The rules are in `.gitignore` under `results/**` - note the `**`, since with a
+plain `results/` git never descends into the directory and the negations below
+it would silently do nothing.
