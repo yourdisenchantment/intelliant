@@ -43,6 +43,31 @@ every table forever.
 decision is noise in the table - drop it, and say here that it was dropped and
 when. The list above is expected to get shorter, not longer.
 
+## Cluster structure is recorded too
+
+Separate from the metric set above, and not subject to its closed list. Those
+seven score a clustering against ground truth and compete with each other for
+which number leads a table. These describe the partition itself, answer no
+question about quality, and are mandatory context in the same way `NoisePct`
+is - a mean ARI says nothing about whether one cluster swallowed the data.
+
+Every run records:
+
+- number of clusters, and the number of points in each;
+- size minimum, maximum, mean and median;
+- the five largest sizes, descending;
+- the largest ratio between neighbouring ranks, and where it sits;
+- the largest cluster as a share of assigned points.
+
+Most of this already exists: `CoreClusterer` attaches a `GiantDiagnostics`
+with `n_clusters`, `top_sizes`, `median`, `max_gap`, `gap_pos` and
+`suspected`. Record what it reports rather than recomputing it - a second
+implementation of the same statistic is a second thing that can disagree.
+
+This block carries the weight on real data, where the spatial figures are
+meaningless and the size distribution is the whole picture. A giant component
+is a size-distribution phenomenon and shows up nowhere else.
+
 ## Every row records what produced it
 
 A metric without its settings cannot be pooled with anything later, and the
@@ -221,6 +246,30 @@ The grid exists because it makes the staged design legible: a reader sees
 where a result was won or lost, which a single scatter of final labels cannot
 show. When a sweep produced many runs per configuration, plot the best one per
 configuration by `ARI_all` rather than all of them.
+
+### The grid does not survive every dimensionality
+
+**2D.** The grid as described, all four panels.
+
+**3D.** Same four panels, but a projection has to be chosen. Fix one camera
+angle - or one 2D projection - and hold it across every panel and every
+variant. A grid where the viewpoint drifts between panels compares nothing.
+Expect the pheromone panel to carry more of the message than it does in 2D,
+since the spatial panels get harder to read as the geometry thickens.
+
+**Real data, hundreds of dimensions.** Drop the spatial panels. Plot the
+pheromone field, and let the cluster-structure table do the rest.
+
+This is not just "it would look cluttered". A UMAP or PCA layout is fitted
+independently of the clustering, so agreement between the two is partly an
+artifact of the projection: a projection can pull apart points the clusterer
+merged, or fold together points it separated, and the picture will look
+decisive either way. Such a plot is an illustration, never evidence. If one is
+made for the article, the caption must say the layout is the projection's and
+not the algorithm's.
+
+What replaces it is the size distribution - the number of clusters, the top
+sizes, the giant share. On 512-dimensional embeddings that is the result.
 
 ### What makes them informative rather than merely bright
 
