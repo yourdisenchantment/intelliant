@@ -184,44 +184,52 @@ would answer questions that were already answered more cheaply.
 Synthetic data is used for two different things, and a dataset built for one
 answers the other badly.
 
-**Calibration** wants few datasets and many parameter values: controlled
-variation, the full seed set, realistic size. The output is a number with a
-window around it.
+**Calibration** asks what settings solve a given geometry. Few datasets, many
+parameter values, the full seed set, realistic size. The output is a
+configuration with a window around it.
 
-**Demonstration of versatility** wants many geometries and one configuration -
-the calibrated one, held fixed. Varying parameters per dataset would defeat
-the claim, which is precisely that a single setting copes with shapes that
-break other methods. The output is a table across datasets, not a window.
+**Coverage** asks how wide the range of solvable geometries is. Many
+geometries, each calibrated in turn. The output is a catalogue: for every
+shape, the configuration that handles it and the grid that was searched to
+find it.
 
-**A versatility demonstration without baselines proves nothing.** Moons and
-concentric circles are famous as the counterexample to k-means, not to
-density-based methods - DBSCAN and HDBSCAN handle both routinely, and they are
-the textbook illustrations of that. A table showing this library scoring well
-on moons, with nothing beside it, says only that the reader should go look up
-what HDBSCAN scores. Every versatility run therefore carries the baselines on
-the same data, the same seeds and the same metric convention.
+Other clusterers appear in neither. Comparison is its own phase, run once the
+configurations exist, and mixing it into calibration answers a question nobody
+asked yet while making the runs more expensive.
 
-That also disciplines the claim. Parity with density methods on the classic
-shapes is the honest expected result and is worth stating plainly; the
-distinguishing argument for the flat version is the inspectable staged
-pipeline, and the stronger one belongs to the multilevel version. Overstating
-a shape that HDBSCAN also solves costs credibility that the real arguments
-then have to buy back.
+### The claim is existence, not a single setting
 
-The geometries worth covering divide accordingly:
+The algorithm is not one configuration that copes with everything, and the
+protocol should not be written as though it were. The claim is that **for any
+geometry there exists a configuration that solves it** - which is a different
+and weaker statement, and an honest one. Flexibility and its cost are the same
+property: the range is wide because the parameters move, and the parameters
+have to move because the range is wide.
 
-| Family | Breaks | Expected here |
-|---|---|---|
-| moons, circles | centroid methods | parity with density methods |
-| anisotropic, elongated | k-means, sensitive to metric | parity |
-| unequal cluster sizes | k-means | parity |
-| **varying density** | DBSCAN's single `eps` | the interesting case |
-| **bridged / touching clusters** | most methods | a known weakness here - see the graph note in ROADMAP |
-| **nested, hierarchical** | flat methods generally | where the multilevel version is aimed |
+Stated that way, the claim is testable but easy to fake. Search hard enough
+and any sufficiently flexible method fits anything. Three things separate a
+result from a fit, and all three are cheap:
 
-The bold rows are the ones worth spending time on. The first three are
-expected in a paper and cheap to produce, but they are table stakes rather
-than evidence.
+**Record the grid, not only the winner.** A configuration that won out of six
+values and one that won out of six hundred are different claims. Without the
+grid in the results file, they read identically a year later.
+
+**Confirm across the seed set.** A configuration found on one seed and holding
+on five is a finding; found on one and reported from one is a coincidence.
+That check has already overturned a result here once.
+
+**Look for the rule.** This is where the actual contribution sits. A table of
+per-geometry winners is overfitting with extra steps; a statement of the form
+"when clusters touch, the cutoff has to come down" or "varying density is what
+the density heuristic is for" is a result, because it predicts rather than
+records. Every calibration pass should ask what the winning direction has in
+common with the shape that produced it, and the answer belongs in ROADMAP
+under established findings.
+
+The cost side of the flexibility deserves the same honesty. Requiring the user
+to calibrate is a real burden, and the answers to it are the adaptive
+threshold work in phase 2 and whatever rule the calibration yields - not
+silence about it.
 
 ### What actually transfers
 
