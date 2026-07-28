@@ -120,19 +120,81 @@ memory and reuse happens through the disk.
 
 ## Notebook structure
 
-Imports go in separate cells, in this order: third-party libraries, then the
-`sys.path` setup that makes `utils/` importable, then local imports, then path
-and plot configuration. Splitting them this way avoids import warnings.
+Every calibration or test notebook has the same skeleton. Each numbered item
+is one `##` section, opening with a markdown heading in its own cell followed
+by a short explanation cell, then the code.
 
-Every section opens with an `##` heading in its own markdown cell followed by
-a separate explanation cell. Execution is sectioned so the pipeline can be
-inspected between stages - that mirrors the library's staged design, which is
-the thing worth showing.
+**Setup**
+
+1. Third-party imports.
+2. `sys.path` setup for local imports.
+3. Local imports - `intelliant`, `utils`.
+4. Paths and plot configuration for this notebook.
+
+These are four **separate** cells, in this order. Combining them produces
+import warnings, because step 3 cannot resolve until step 2 has run.
+
+Find the repository root by walking up to the marker rather than counting
+directories - `parents[3]` breaks the day a folder level is added:
+
+```python
+PROJECT_ROOT = next(p for p in Path.cwd().resolve().parents if (p / "pyproject.toml").exists())
+```
+
+Results go to the path that mirrors this notebook, so a table traces back to
+the run: `PROJECT_ROOT / "results" / <group> / <dataset> / <clusterer>`.
+
+**Pipeline**
+
+5. Build or load the dataset.
+6. Graph settings.
+7. Build the graph.
+8. Ant settings.
+9. Run the ants.
+10. Threshold: pick the cutoff, and scan around it when that is the question.
+11. Absorption settings.
+12. Run absorption.
+13. Results.
+
+Settings are declared in their own section before the stage that consumes
+them, never inline at the call. That is what makes a run readable from the log
+alone, and it is why the library takes no defaults for these parameters.
+
+Keep the stages separate. Inspecting `graph_`, `pheromone_matrix_` and
+`cores_` between them is the library's staged design, and a notebook that
+collapses them into one cell demonstrates the opposite of the point.
+
+A sweep is the same skeleton with steps 6-13 inside the loop. Run one
+reference configuration linearly first so the stages stay inspectable, then
+sweep.
 
 Print tables in full: aligned manual output, or polars with
 `pl.Config(tbl_rows=-1, tbl_cols=-1)`. Never a bare `print(df)` that hides
 rows behind an ellipsis - a truncated table in a run log is a result nobody
 can check.
+
+## Two modes, and they produce different artifacts
+
+A notebook is written once but used in two phases, and confusing them fills
+the repository with noise.
+
+**While searching.** Parameters are not settled; the output exists for the
+agent to read. Print machine-readable tables, write `runs.csv`, wrap the run
+in `utils.Tee` so it lands in `output.txt`. Do not produce figures - they are
+read by nobody at this stage and cost megabytes. Do not commit the executed
+`.ipynb` on every iteration either: the `.py` is what changes, and a rerun of
+a sweep is not a revision worth keeping. Iterate on the `.py`, and let
+`output.txt` be the deliverable the agent works from.
+
+**Once the values are settled.** The run becomes the record. Execute the
+notebook a final time, commit the `.ipynb` **with its output** - that is the
+showcase on GitHub - and write the full results to `results/`: tables as
+CSV/JSON, and now the figures, which is the one point at which they are worth
+producing.
+
+A document on how those results are then read - which comparisons are
+meaningful, how to present them - belongs with the article work, not here. It
+is deliberately not written yet.
 
 ## What is kept
 
@@ -147,8 +209,9 @@ from them.
 | figures | `results/<...>/` | no |
 | datasets and embeddings | `data/<dataset>/` | no |
 
-`.ipynb` are committed with their output on purpose: they are the showcase on
-GitHub, and a notebook whose results you cannot see proves nothing.
+`.ipynb` are committed with their output on purpose - they are the showcase on
+GitHub, and a notebook whose results you cannot see proves nothing - but only
+once the values are settled. See the two modes below.
 
 Figures are the one deliberate exception among publication artifacts. A run's
 numbers are a few kilobytes and expensive to reproduce; figures are derived

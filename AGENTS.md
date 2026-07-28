@@ -331,8 +331,11 @@ The protocol - metrics, seeds, notebook layout, what is kept - is in
    - the run is fine and produced a finding - record it;
    - the finding implies a decision about the research - raise it, do not
      take it.
-6. **Agent commits** the notebook with its executed output and the results
-   files, then pushes `dev`.
+6. **Agent commits.** While the parameters are still being searched that
+   means the jupytext `.py` and `runs.csv` - not the executed notebook, since
+   a rerun of a sweep is not a revision worth keeping. Once the values are
+   settled it means the `.ipynb` with its output, the tables and the figures.
+   Then push `dev`.
 
 A finding either changes the library or it does not. If it does, the change
 goes through the normal cycle - tests, verify chain, its own commit. If a user
