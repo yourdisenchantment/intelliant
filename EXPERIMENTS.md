@@ -101,6 +101,11 @@ two runs comparable without re-deriving whether they were measured on the same
 footing. A run on a different seed set is not comparable with anything already
 recorded - it is a new experiment, not a data point in the old one.
 
+Reproducibility has one hole, and it is not in the colony: the approximate
+neighbour search is not bit-reproducible under a fixed seed. Calibration runs
+therefore pin `knn_method="exact"` rather than letting `"auto"` decide - see
+the fork table.
+
 **Data seed.** The difficulty of the layout itself, which is a different
 question and does not belong on the same axis. It varies through the named
 dataset variations - seed and spread together, as in `s42_std0.3` - so that
@@ -210,6 +215,44 @@ A switch turned on drags its sub-parameters into the grid with it. Enabling
 elite ants adds three, so the cost of the "both" cell is not comparable to the
 cost of the "neither" cell.
 
+### Forks
+
+Discrete choices rather than ranges. They are searched as a set of variants,
+not as an interval, and a pass either covers a fork or states that it held it.
+
+| Fork | Options | Notes |
+|---|---|---|
+| `metric` | cosine, euclidean, callable | Held at cosine after one confirming pass. |
+| `mutual` | AND / OR symmetrisation | Changes connectivity, so it interacts with `n_neighbors`. |
+| `knn_method` | exact / approx / auto | **See below - not infrastructure.** |
+| `evaporation_schedule` | step / iteration | Settled before anything else. |
+| `use_no_return` | on / off | On by default and never measured. |
+| `use_node_density` | on / off | With `node_density_gamma`. |
+| `use_elite_ants` | on / off | With three sub-parameters. |
+| threshold `method` | otsu / percentile / stat | Scan-based methods arrive in phase 2. |
+| `absorb_isolated` | on / off | Whether isolated points are absorbed at all. |
+
+**`knn_method` is a fork and it fires by itself.** Under `"auto"` the builder
+switches from the exact search to pynndescent above `approx_threshold`, which
+defaults to 50000 points. Two consequences, and both bite exactly where the
+calibration is aimed:
+
+- A sweep at ten thousand points runs exact and a real dataset at a hundred
+  thousand runs approximate. The graph is built by a different algorithm on
+  either side of that line, so a value calibrated below it has crossed a fork
+  before it is applied above it.
+- The approximate search is **not bit-reproducible**. pynndescent parallelises
+  by default and a fixed `random_state` does not by itself guarantee an
+  identical graph - the library's own docstring says so. Above the threshold,
+  the reproducibility this protocol requires does not hold.
+
+So: **set `knn_method` explicitly in every calibration run** rather than
+leaving it on `"auto"`, so the fork cannot fire without being recorded. Use
+`"exact"` while calibrating, and measure the fork deliberately - exact against
+approx at a size where both are affordable - to find out what the
+approximation costs. On synthetic that measurement is cheap, and it is the
+only way the transfer to real scale is anything but an assumption.
+
 ### Threshold
 
 | Parameter | Notes |
@@ -240,8 +283,9 @@ The noise convention in ARI is **not** a search axis. `ARI_all` leads and
 run would mean selecting the metric that flatters the result, which is the
 one thing a fixed convention exists to prevent.
 
-`verbose`, `warmup`, `knn_method`, `approx_threshold` are infrastructure and
-do not shape the result.
+`verbose` and `warmup` are infrastructure and do not shape the result.
+`knn_method` and `approx_threshold` look like infrastructure and are not - see
+the fork above.
 
 ## What to display
 
