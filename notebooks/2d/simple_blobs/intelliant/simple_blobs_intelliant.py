@@ -274,89 +274,150 @@ print("\nreference: the July calibration scored mean ARI 0.774 at 1000 points.")
 print(f"this run is at {N_SAMPLES}.")
 
 # %% [markdown]
-# ## 14. All seeds
+# %% [markdown]
+# ## 14. What gets compared
 #
-# The reference configuration across the standard seed set. A single-seed
-# number is a data point, not a result: what matters below is the spread, not
-# only the mean.
+# Two axes. **Heuristic sets** are the 2x2 over the density and elite
+# switches; `use_no_return` is a third switch, on by default, and it is held
+# here rather than varied - noted so that it is a recorded choice and not an
+# oversight.
 #
-# The graph does not depend on the algorithm seed, so it is built once and
-# reused.
+# **Forks** are discrete choices that change the graph or the process rather
+# than tuning it. Only `metric` is varied in this pass, because the reference
+# run above showed cosine slicing the blobs into angular wedges, and every
+# other parameter is measured on top of whatever graph the metric produces.
+#
+# The heuristic sub-parameters have no established values - the July
+# calibration tuned base parameters only. These are starting points, not
+# recommendations, and the grid they came from is one value wide.
 
 # %%
-rows = []
-for seed in SEEDS:
-    t0 = time.perf_counter()
-    extractor = PheromoneExtractor(**ACO_PARAMS, random_state=seed, verbose=False)
-    extractor.fit(graph)
-    cut = find_threshold(extractor.pheromone_matrix_.data, **THRESHOLD_PARAMS)
-    lab = CoreClusterer(**CLUSTER_PARAMS, verbose=False).fit_predict(
-        extractor.pheromone_matrix_, threshold_value=cut.value, X=X
-    )
-    seconds = time.perf_counter() - t0
+HEURISTIC_SETS = {
+    "none": {},
+    "density": {
+        "use_node_density": True,
+        "node_density_gamma": 1.0,
+    },
+    "elite": {
+        "use_elite_ants": True,
+        "elite_ratio": 0.1,
+        "elite_multiplier": 2.0,
+        "elite_start_iteration": 5,
+    },
+    "both": {
+        "use_node_density": True,
+        "node_density_gamma": 1.0,
+        "use_elite_ants": True,
+        "elite_ratio": 0.1,
+        "elite_multiplier": 2.0,
+        "elite_start_iteration": 5,
+    },
+}
 
-    row = {
-        "dataset": "simple_blobs",
-        "variation": VARIATION,
-        "n_samples": N_SAMPLES,
-        "seed": seed,
-        **{f"graph_{k}": v for k, v in GRAPH_PARAMS.items()},
-        **{f"aco_{k}": v for k, v in ACO_PARAMS.items()},
-        "threshold_method": THRESHOLD_PARAMS["method"],
-        "cutoff_value": cut.value,
-        "cutoff_percentile": cut.percentile,
-        **{f"cluster_{k}": v for k, v in CLUSTER_PARAMS.items()},
-        **evaluate_clustering(y_true, lab),
-        **{k: v for k, v in cluster_structure(lab).items() if k != "Top5"},
-        "seconds": seconds,
-    }
-    rows.append(row)
-    print(
-        f"seed {seed:>5}  ARI_all {row['ARI_all']:.4f}  "
-        f"clusters {row['Clusters']:>3}  noise {row['NoisePct']:5.1f}%  {seconds:.2f}s"
-    )
+FORKS = {
+    "euclidean": {"metric": "euclidean"},
+    "cosine": {"metric": "cosine"},
+}
 
-runs = pl.DataFrame(rows)
+print(f"heuristic sets : {list(HEURISTIC_SETS)}")
+print(f"forks          : {list(FORKS)}")
+print(f"seeds          : {SEEDS}")
+print(f"cells          : {len(FORKS)} x {len(HEURISTIC_SETS)} = {len(FORKS) * len(HEURISTIC_SETS)}")
+print(f"runs           : {len(FORKS) * len(HEURISTIC_SETS) * len(SEEDS)}")
+
 
 # %% [markdown]
-# ### Spread across seeds
+# ## 15. Sweep
 #
-# A parameter whose advantage is smaller than this spread has not been shown
-# to have one.
+# The graph depends only on the fork, so it is built once per fork and reused
+# across every heuristic set and seed. One row per run, carrying the settings
+# that produced it - a metric without them cannot be pooled with anything
+# later.
+
 
 # %%
-summary = runs.select(
-    pl.col("ARI_all").mean().alias("ARI_all_mean"),
-    pl.col("ARI_all").std().alias("ARI_all_std"),
-    pl.col("ARI_all").min().alias("ARI_all_min"),
-    pl.col("ARI_all").max().alias("ARI_all_max"),
-    pl.col("ARI_assigned").mean().alias("ARI_assigned_mean"),
-    pl.col("Clusters").mean().alias("Clusters_mean"),
-    pl.col("NoisePct").mean().alias("NoisePct_mean"),
-    pl.col("seconds").sum().alias("seconds_total"),
-)
-print(summary)
-print()
-print(
-    runs.select(
-        "seed", "ARI_all", "ARI_assigned", "Clusters", "NoisePct", "SizeMax", "SizeMedian", "GiantShare", "seconds"
-    )
-)
+def run_once(built_graph, aco_extra: dict, seed: int, features: np.ndarray):
+    """One full pipeline run. Returns the artifacts a grid needs."""
+    extractor = PheromoneExtractor(**ACO_PARAMS, **aco_extra, random_state=seed, verbose=False)
+    extractor.fit(built_graph)
+    cut = find_threshold(extractor.pheromone_matrix_.data, **THRESHOLD_PARAMS)
+    clusterer_ = CoreClusterer(**CLUSTER_PARAMS, verbose=False)
+    lab = clusterer_.fit_predict(extractor.pheromone_matrix_, threshold_value=cut.value, X=features)
+    return extractor, cut, clusterer_, lab
 
+
+graphs = {}
+rows = []
+
+for fork_name, fork in FORKS.items():
+    params = {**GRAPH_PARAMS, **fork}
+    t0 = time.perf_counter()
+    graphs[fork_name] = GraphBuilder(**params, verbose=False).build(X)
+    print(f"\ngraph [{fork_name}] built in {time.perf_counter() - t0:.2f}s, {graphs[fork_name].nnz:,} edges")
+
+    for set_name, extra in HEURISTIC_SETS.items():
+        for seed in SEEDS:
+            t0 = time.perf_counter()
+            _, cut, _, lab = run_once(graphs[fork_name], extra, seed, X)
+            seconds = time.perf_counter() - t0
+            rows.append(
+                {
+                    "dataset": "simple_blobs",
+                    "variation": VARIATION,
+                    "n_samples": N_SAMPLES,
+                    "fork": fork_name,
+                    "heuristics": set_name,
+                    "seed": seed,
+                    **{f"graph_{k}": v for k, v in params.items()},
+                    **{f"aco_{k}": v for k, v in {**ACO_PARAMS, **extra}.items()},
+                    "threshold_method": THRESHOLD_PARAMS["method"],
+                    "cutoff_value": cut.value,
+                    "cutoff_percentile": cut.percentile,
+                    **evaluate_clustering(y_true, lab),
+                    **{k: v for k, v in cluster_structure(lab).items() if k != "Top5"},
+                    "seconds": seconds,
+                }
+            )
+        done = [r for r in rows if r["fork"] == fork_name and r["heuristics"] == set_name]
+        mean = float(np.mean([r["ARI_all"] for r in done]))
+        std = float(np.std([r["ARI_all"] for r in done]))
+        print(
+            f"  {set_name:8} ARI_all {mean:.4f} +/- {std:.4f}   clusters {np.mean([r['Clusters'] for r in done]):.1f}"
+        )
+
+runs = pl.DataFrame(rows)
 runs.write_csv(RESULTS_DIR / "runs.csv")
 print(f"\nwritten: {RESULTS_DIR / 'runs.csv'}")
 
 # %% [markdown]
-# ## 15. Figures
+# ### Summary
 #
-# The four panels of the pipeline side by side: input, pheromone field with
-# the cutoff marked, cores before absorption, final labels. One colour per
-# cluster held across panels; noise is grey and never a palette colour.
-#
-# Saving is commented out on purpose. While the configuration is still being
-# searched, figures are drawn and looked at but not written to `results/`.
-# Uncomment the last line when the values are settled.
+# Mean and spread per cell. A difference smaller than the spread has not been
+# shown to be a difference.
 
+# %%
+summary = (
+    runs.group_by("fork", "heuristics")
+    .agg(
+        pl.col("ARI_all").mean().alias("ARI_mean"),
+        pl.col("ARI_all").std().alias("ARI_std"),
+        pl.col("ARI_all").min().alias("ARI_min"),
+        pl.col("ARI_all").max().alias("ARI_max"),
+        pl.col("Clusters").mean().alias("Clusters"),
+        pl.col("NoisePct").mean().alias("NoisePct"),
+        pl.col("GiantShare").mean().alias("GiantShare"),
+        pl.col("seconds").mean().alias("seconds"),
+    )
+    .sort("fork", "ARI_mean", descending=[False, True])
+)
+print(summary)
+
+# %% [markdown]
+# ## 16. Grids
+#
+# One grid per cell, showing the best seed in that cell by `ARI_all`. The
+# winner is re-run rather than kept in memory - a rerun costs a fraction of a
+# second and holding every pheromone matrix does not.
 
 # %%
 NOISE_GREY = [0.72, 0.72, 0.72, 1.0]
@@ -365,56 +426,71 @@ NOISE_GREY = [0.72, 0.72, 0.72, 1.0]
 def panel_colours(labels: np.ndarray) -> tuple[np.ndarray, ListedColormap]:
     """Map labels to colour indices, noise last and grey.
 
-    Cluster colours are drawn from the three tab20 families, which give 60
-    distinct hues and - unlike tab20 alone - none of them grey, so a real
-    cluster can never be mistaken for noise. Past roughly twenty clusters
-    colour identity stops working regardless; the size table is what carries
-    the information then, not the picture.
+    Cluster colours come from the three tab20 families - 60 hues, none of them
+    grey - so a real cluster can never be mistaken for noise. Past roughly
+    twenty clusters colour identity stops working regardless; the size table
+    is what carries the information then, not the picture.
     """
     ids = np.unique(labels[labels >= 0])
     lookup = {label: i for i, label in enumerate(ids)}
     idx = np.array([lookup.get(v, len(ids)) for v in labels])
     families = np.vstack([plt.colormaps[n](np.linspace(0, 1, 20)) for n in ("tab20", "tab20b", "tab20c")])
-    keep = families[np.ptp(families[:, :3], axis=1) > 0.12]  # drop the greys
+    keep = families[np.ptp(families[:, :3], axis=1) > 0.12]
     base = keep[np.arange(max(len(ids), 1)) % len(keep)]
     return idx, ListedColormap(np.vstack([base, NOISE_GREY]))
 
 
-fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+def draw_grid(fork_name: str, set_name: str, seed: int) -> None:
+    """Four panels: input, pheromone field with its cutoff, cores, clusters."""
+    extractor, cut, clusterer_, lab = run_once(graphs[fork_name], HEURISTIC_SETS[set_name], seed, X)
+    stats = evaluate_clustering(y_true, lab)
 
-idx, cmap = panel_colours(y_true)
-axes[0].scatter(X[:, 0], X[:, 1], c=idx, cmap=cmap, s=3)
-axes[0].set_title(f"dataset - {VARIATION}, N={N_SAMPLES}")
+    fig, axes = plt.subplots(1, 4, figsize=(20, 4.6))
 
-values = aco.pheromone_matrix_.data
-axes[1].hist(values, bins=100, color="#4a6fa5")
-axes[1].axvline(cutoff.value, color="#c0392b", lw=2, label=f"otsu = {cutoff.value:.3f} (p{cutoff.percentile:.0f})")
-axes[1].set_yscale("log")
-axes[1].set_title("pheromone field with cutoff")
-axes[1].legend()
+    idx, cmap = panel_colours(y_true)
+    axes[0].scatter(X[:, 0], X[:, 1], c=idx, cmap=cmap, s=3)
+    axes[0].set_title(f"dataset - {VARIATION}, N={N_SAMPLES}")
 
-idx, cmap = panel_colours(clusterer.labels_pheromone_)
-axes[2].scatter(X[:, 0], X[:, 1], c=idx, cmap=cmap, s=3)
-axes[2].set_title(f"cores - {len(np.unique(clusterer.cores_[clusterer.cores_ >= 0]))} found")
+    axes[1].hist(extractor.pheromone_matrix_.data, bins=100, color="#4a6fa5")
+    axes[1].axvline(
+        cut.value,
+        color="#c0392b",
+        lw=2,
+        label=f"{THRESHOLD_PARAMS['method']} = {cut.value:.3f} (p{cut.percentile:.0f})",
+    )
+    axes[1].set_yscale("log")
+    axes[1].set_title("pheromone field with cutoff")
+    axes[1].legend()
 
-idx, cmap = panel_colours(labels)
-axes[3].scatter(X[:, 0], X[:, 1], c=idx, cmap=cmap, s=3)
-axes[3].set_title(f"clusters - ARI_all {metrics['ARI_all']:.3f}, noise {metrics['NoisePct']:.1f}%")
+    cores = clusterer_.labels_pheromone_
+    idx, cmap = panel_colours(cores)
+    axes[2].scatter(X[:, 0], X[:, 1], c=idx, cmap=cmap, s=3)
+    axes[2].set_title(f"cores - {len(np.unique(cores[cores >= 0]))} found")
 
-for ax in (axes[0], axes[2], axes[3]):
-    ax.set_xlim(X[:, 0].min() - 1, X[:, 0].max() + 1)
-    ax.set_ylim(X[:, 1].min() - 1, X[:, 1].max() + 1)
+    idx, cmap = panel_colours(lab)
+    axes[3].scatter(X[:, 0], X[:, 1], c=idx, cmap=cmap, s=3)
+    axes[3].set_title(f"clusters - ARI_all {stats['ARI_all']:.3f}, noise {stats['NoisePct']:.1f}%")
 
-fig.suptitle(
-    f"simple_blobs / intelliant - k={GRAPH_PARAMS['n_neighbors']} "
-    f"{GRAPH_PARAMS['metric']}, evap={ACO_PARAMS['evaporation_rate']} "
-    f"({ACO_PARAMS['evaporation_schedule']}), otsu",
-    y=1.02,
-)
-fig.tight_layout()
+    for ax in (axes[0], axes[2], axes[3]):
+        ax.set_xlim(X[:, 0].min() - 1, X[:, 0].max() + 1)
+        ax.set_ylim(X[:, 1].min() - 1, X[:, 1].max() + 1)
 
-# fig.savefig(FIGURES_DIR / "grid_reference.png", bbox_inches="tight")
-plt.show()
+    fig.suptitle(
+        f"{fork_name} / heuristics: {set_name} / seed {seed} - "
+        f"k={GRAPH_PARAMS['n_neighbors']}, evap={ACO_PARAMS['evaporation_rate']} "
+        f"({ACO_PARAMS['evaporation_schedule']}), {THRESHOLD_PARAMS['method']}",
+        y=1.04,
+    )
+    fig.tight_layout()
+    # fig.savefig(FIGURES_DIR / f"grid_{fork_name}_{set_name}.png", bbox_inches="tight")
+    plt.show()
+
+
+best = runs.sort("ARI_all", descending=True).group_by("fork", "heuristics").first().sort("fork", "heuristics")
+print(best.select("fork", "heuristics", "seed", "ARI_all", "Clusters", "NoisePct"))
+
+for row in best.iter_rows(named=True):
+    draw_grid(row["fork"], row["heuristics"], row["seed"])
 
 # %% [markdown]
 # ## Done
