@@ -134,6 +134,10 @@ by a short explanation cell, then the code.
 These are four **separate** cells, in this order. Combining them produces
 import warnings, because step 3 cannot resolve until step 2 has run.
 
+**Every path is a `pathlib.Path`.** No `os.path`, no string concatenation, no
+manual separators - a notebook that builds paths by hand breaks on the first
+machine with a different layout, and these are meant to be rerun.
+
 Find the repository root by walking up to the marker rather than counting
 directories - `parents[3]` breaks the day a folder level is added:
 
@@ -196,6 +200,56 @@ A document on how those results are then read - which comparisons are
 meaningful, how to present them - belongs with the article work, not here. It
 is deliberately not written yet.
 
+## Figures
+
+Built in the settled phase only, and then for **every** variant, not only the
+ones that worked. A variant that failed is the more interesting picture, and
+it is the one nobody thinks to save.
+
+### The four-panel grid
+
+One grid per variant, the four stages of the pipeline side by side:
+
+| Panel | Shows |
+|---|---|
+| dataset | the input, coloured by ground truth |
+| pheromone field | the distribution with the chosen cutoff marked, or the graph with sub-threshold edges dropped - the point is that the cut is visible |
+| cores | what survived thresholding, before absorption |
+| clusters | the final labels, noise included |
+
+The grid exists because it makes the staged design legible: a reader sees
+where a result was won or lost, which a single scatter of final labels cannot
+show. When a sweep produced many runs per configuration, plot the best one per
+configuration by `ARI_all` rather than all of them.
+
+### What makes them informative rather than merely bright
+
+- **One colour per cluster, held across all four panels.** If cluster 3 is
+  green in the dataset panel it is green in the cores panel. Without this the
+  grid is four unrelated pictures.
+- **Noise is grey**, never a palette colour. It is not a cluster and should
+  not read as one.
+- **The title carries the parameters and the metric** - the figure has to
+  survive being pasted into an article draft without its notebook.
+- **Axes fixed across variants of the same dataset**, so two grids can be laid
+  side by side and compared.
+- **Colourblind-safe palette**, and readable at the size a paper prints.
+- PNG, at a DPI that survives a zoom.
+
+### Where they go
+
+```
+results/<group>/<dataset>/<clusterer>/
+    runs.csv          versioned
+    summary.json      versioned
+    figures/          NOT versioned
+```
+
+Figures are derived from the tables and cost megabytes; the tables are a few
+kilobytes and expensive to reproduce. That asymmetry is why one is in git and
+the other is not, and why the tables must carry every parameter - a figure can
+always be redrawn from them, but a rerun cannot be recovered from a figure.
+
 ## What is kept
 
 `results/` holds what a publication needs: the tables, and the figures built
@@ -206,7 +260,7 @@ from them.
 | notebook + jupytext source | `notebooks/<...>/` | yes |
 | run log | `output.txt` beside the notebook | no |
 | tables | `results/<...>/*.csv`, `*.json` | yes |
-| figures | `results/<...>/` | no |
+| figures | `results/<...>/figures/` | no |
 | datasets and embeddings | `data/<dataset>/` | no |
 
 `.ipynb` are committed with their output on purpose - they are the showcase on
