@@ -155,6 +155,60 @@ Record the grid in the results file the same as any other parameter. A table
 that shows which value won but not which values were offered cannot be read
 later - "the best of three" and "the best of six" are different claims.
 
+## Scale, and what transfers
+
+Synthetic and real data are searched under different budgets, and that
+asymmetry is the point of doing synthetic first.
+
+**On synthetic, cost is not the constraint.** Data is generated, runs are
+seconds, and there is no reason to be frugal: keep the exploration pass wide,
+run a full factorial wherever interaction is suspected rather than assuming
+independence, and cover the variations exhaustively. The narrowing in the
+previous section exists to save budget; where there is no budget to save, it
+is a readability device rather than a necessity.
+
+**Use realistic sizes.** A thousand points is a debugging size. Calibrate at
+ten thousand or more, because several parameters are not scale-free: `n_ants`
+is set from `N`, `path_length` interacts with the diameter of the graph, and
+total deposit per iteration scales as `n_ants` times `path_length`, which
+governs how quickly edges saturate at `tau_max`. A value tuned at N=1000 and
+applied at N=100000 is an extrapolation, not a result.
+
+**On real data the grid is confirmation, not search.** Take the values
+synthetic produced, verify they hold, and vary only what is shown not to
+transfer. A real-data sweep at synthetic width is unaffordable and, worse, it
+would answer questions that were already answered more cheaply.
+
+### What actually transfers
+
+Being clear about this is what makes the synthetic phase worth its time.
+
+**Scale transfers, with care.** The N-dependent parameters above are the ones
+to re-check, and raising N on synthetic is what makes that check possible
+before real data is involved.
+
+**Dimensionality does not transfer, and 2D and 3D cannot fix it.** The reason
+kNN graphs are used at all is that distances concentrate in high dimensions -
+and at two or three dimensions there is no concentration to observe. Whatever
+2D says about the shape of the pheromone field, it says under conditions the
+real case does not share. This is already visible: on synthetic the field's
+middle plateau dominates and Otsu lands mid-plateau, while on real data a
+`tau_min` spike covers around 97% of edges and drags the same method somewhere
+else entirely. Two different failure faces, and only one of them is reachable
+from a plane.
+
+**Cluster geometry does not transfer either.** Gaussian blobs are convex,
+isotropic and equally dense. Embedding clusters are none of those. The
+non-convex datasets in phase 1 exist for exactly this reason and are not
+decoration.
+
+### Measure one run before launching a sweep
+
+Runtime is already a recorded column; use it. Time a single run at the target
+size, multiply by configurations times variations times seeds, and decide with
+the number in front of you. This is a thirty-second check that prevents
+starting a forty-hour sweep by accident, and it costs nothing to make a habit.
+
 ## What makes a run reportable
 
 - It ran from a clean regeneration of its data, not from a mutated kernel.

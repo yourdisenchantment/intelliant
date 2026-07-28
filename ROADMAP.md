@@ -47,6 +47,12 @@ dominant middle plateau makes Otsu land mid-plateau. On real data a `tau_min`
 spike covering ~97% of edges drags all-data Otsu down, while Otsu over active
 edges only lands near p97 and shatters the giant component.
 
+**All of it was measured at a thousand points per dataset.** The experiment
+protocol now calls that a debugging size, since `n_ants` is set from `N` and
+the total deposit per iteration scales with it. The values above are not
+wrong, but they were established under conditions no real dataset shares, and
+re-confirmation at a realistic size is part of phase 1 rather than a formality.
+
 **One finding needs re-reading.** All of the above was measured before the
 `evaporation_schedule` semantics came to light. Under `"step"` the field
 decays once per ant step, so changing `path_length` silently changes the
