@@ -73,6 +73,26 @@ This block carries the weight on real data, where the spatial figures are
 meaningless and the size distribution is the whole picture. A giant component
 is a size-distribution phenomenon and shows up nowhere else.
 
+## The graph baseline is recorded on every run
+
+Before any ants run, the KNN graph already has connected components, and those
+components are already a clustering. Every run records what they score:
+
+- `baseline_components` - how many the graph has;
+- `baseline_ARI` - what they score against the ground truth;
+- `ARI_over_baseline` - the run's score minus that.
+
+**A result that does not clear its own baseline is not a result.** This is not
+hypothetical: on 10000-point blobs three of four fork configurations returned
+the graph's components untouched, identical on all five seeds to six decimal
+places, and the fourth cleared the baseline by less than its own seed spread.
+None of that is visible from the ARI alone, and none of the earlier
+calibration measured it.
+
+A seed spread of exactly zero is the signature to watch for. It means the
+stochastic part of the pipeline changed nothing, so whatever came out was
+decided by the graph.
+
 ## Every row records what produced it
 
 A metric without its settings cannot be pooled with anything later, and the

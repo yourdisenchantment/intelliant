@@ -38,6 +38,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from matplotlib.colors import ListedColormap
+from scipy.sparse.csgraph import connected_components
 from sklearn.datasets import make_blobs
 
 # %% [markdown]
@@ -118,6 +119,10 @@ print(f"variation {VARIATION}: {X.shape[0]} points, {X.shape[1]}D, {N_CENTERS} c
 # Declared here rather than inline at the call, so the run is readable from
 # `output.txt` alone.
 #
+# `metric` is euclidean, not the cosine the July calibration used. Cosine
+# measures angle from the origin, and these blobs sit off it - the sweep below
+# and ROADMAP record what that does. On embeddings the choice inverts.
+#
 # `knn_method` is pinned rather than left on `"auto"`. Under `"auto"` the
 # builder switches to the approximate search above 50000 points, and the
 # approximate search is not bit-reproducible under a fixed seed.
@@ -125,7 +130,7 @@ print(f"variation {VARIATION}: {X.shape[0]} points, {X.shape[1]}D, {N_CENTERS} c
 # %%
 GRAPH_PARAMS = {
     "n_neighbors": 15,
-    "metric": "cosine",
+    "metric": "euclidean",
     "mutual": True,
     "knn_method": "exact",
 }
@@ -275,70 +280,72 @@ print(f"this run is at {N_SAMPLES}.")
 
 # %% [markdown]
 # %% [markdown]
+# %% [markdown]
 # ## 14. What gets compared
 #
-# Two axes. **Heuristic sets** are the 2x2 over the density and elite
-# switches; `use_no_return` is a third switch, on by default, and it is held
-# here rather than varied - noted so that it is a recorded choice and not an
-# oversight.
+# Two axes, and which one is worth spending on changes between passes.
 #
 # **Forks** are discrete choices that change the graph or the process rather
-# than tuning it. Only `metric` is varied in this pass, because the reference
-# run above showed cosine slicing the blobs into angular wedges, and every
-# other parameter is measured on top of whatever graph the metric produces.
+# than tuning it. This pass varies `mutual` - AND against OR symmetrisation -
+# and `evaporation_schedule`, the two remaining forks that alter what the ants
+# walk on and how the field decays.
 #
-# The heuristic sub-parameters have no established values - the July
-# calibration tuned base parameters only. These are starting points, not
-# recommendations, and the grid they came from is one value wide.
+# Every graph also reports its **baseline**: the ARI of its own connected
+# components, computed before any ant runs. Without it a score cannot be read -
+# a pipeline that hands back the graph's components unchanged looks like a
+# result and is not one.
+#
+# **Heuristic sets** collapse to `none` here. The previous pass ran the full
+# 2x2 across the metric fork and found every difference between the sets
+# smaller than the seed spread within them under euclidean, so the axis is not
+# where the information is. That result is in `runs_metric_heuristics.csv`;
+# widening this axis again needs a reason, not a habit.
+#
+# `metric` is held at euclidean, which the previous pass settled for this
+# data - cosine slices spatial blobs into angular wedges. That choice does not
+# carry to the text datasets, where the rule inverts.
+#
+# Each sweep writes its own results file. Overwriting one file per pass would
+# leave only the newest question answered.
 
 # %%
-HEURISTIC_SETS = {
-    "none": {},
-    "density": {
-        "use_node_density": True,
-        "node_density_gamma": 1.0,
-    },
-    "elite": {
-        "use_elite_ants": True,
-        "elite_ratio": 0.1,
-        "elite_multiplier": 2.0,
-        "elite_start_iteration": 5,
-    },
-    "both": {
-        "use_node_density": True,
-        "node_density_gamma": 1.0,
-        "use_elite_ants": True,
-        "elite_ratio": 0.1,
-        "elite_multiplier": 2.0,
-        "elite_start_iteration": 5,
-    },
-}
+SWEEP_NAME = "graph_forks"
 
 FORKS = {
-    "euclidean": {"metric": "euclidean"},
-    "cosine": {"metric": "cosine"},
+    "mutual_step": {"graph": {"mutual": True}, "aco": {"evaporation_schedule": "step"}},
+    "mutual_iter": {"graph": {"mutual": True}, "aco": {"evaporation_schedule": "iteration"}},
+    "or_step": {"graph": {"mutual": False}, "aco": {"evaporation_schedule": "step"}},
+    "or_iter": {"graph": {"mutual": False}, "aco": {"evaporation_schedule": "iteration"}},
 }
 
-print(f"heuristic sets : {list(HEURISTIC_SETS)}")
+HEURISTIC_SETS = {"none": {}}
+
+print(f"sweep          : {SWEEP_NAME}")
 print(f"forks          : {list(FORKS)}")
+print(f"heuristic sets : {list(HEURISTIC_SETS)}")
 print(f"seeds          : {SEEDS}")
 print(f"cells          : {len(FORKS)} x {len(HEURISTIC_SETS)} = {len(FORKS) * len(HEURISTIC_SETS)}")
 print(f"runs           : {len(FORKS) * len(HEURISTIC_SETS) * len(SEEDS)}")
+
+for name, fork in FORKS.items():
+    rate = {**ACO_PARAMS, **fork["aco"]}["evaporation_rate"]
+    length = {**ACO_PARAMS, **fork["aco"]}["path_length"]
+    schedule = {**ACO_PARAMS, **fork["aco"]}["evaporation_schedule"]
+    decay = 1 - (1 - rate) ** length if schedule == "step" else rate
+    print(f"  {name:12} effective decay per iteration: {decay:.3f}")
 
 
 # %% [markdown]
 # ## 15. Sweep
 #
-# The graph depends only on the fork, so it is built once per fork and reused
-# across every heuristic set and seed. One row per run, carrying the settings
-# that produced it - a metric without them cannot be pooled with anything
-# later.
+# Graphs are cached by their parameters, so two forks that differ only in an
+# ACO setting share one graph instead of rebuilding it.
 
 
 # %%
 def run_once(built_graph, aco_extra: dict, seed: int, features: np.ndarray):
     """One full pipeline run. Returns the artifacts a grid needs."""
-    extractor = PheromoneExtractor(**ACO_PARAMS, **aco_extra, random_state=seed, verbose=False)
+    extractor = PheromoneExtractor(**{**ACO_PARAMS, **aco_extra}, random_state=seed, verbose=False)
     extractor.fit(built_graph)
     cut = find_threshold(extractor.pheromone_matrix_.data, **THRESHOLD_PARAMS)
     clusterer_ = CoreClusterer(**CLUSTER_PARAMS, verbose=False)
@@ -347,53 +354,72 @@ def run_once(built_graph, aco_extra: dict, seed: int, features: np.ndarray):
 
 
 graphs = {}
+baselines = {}
 rows = []
 
 for fork_name, fork in FORKS.items():
-    params = {**GRAPH_PARAMS, **fork}
-    t0 = time.perf_counter()
-    graphs[fork_name] = GraphBuilder(**params, verbose=False).build(X)
-    print(f"\ngraph [{fork_name}] built in {time.perf_counter() - t0:.2f}s, {graphs[fork_name].nnz:,} edges")
+    graph_params = {**GRAPH_PARAMS, **fork["graph"]}
+    key = tuple(sorted(graph_params.items()))
+    if key not in graphs:
+        t0 = time.perf_counter()
+        graphs[key] = GraphBuilder(**graph_params, verbose=False).build(X)
+        n_comp, comp = connected_components(graphs[key], directed=False)
+        baselines[key] = {
+            "baseline_components": n_comp,
+            "baseline_ARI": evaluate_clustering(y_true, comp)["ARI_all"],
+        }
+        print(f"\ngraph {dict(fork['graph'])} built in {time.perf_counter() - t0:.2f}s, {graphs[key].nnz:,} edges")
+        print(
+            f"  baseline: {n_comp} connected components, ARI_all "
+            f"{baselines[key]['baseline_ARI']:.4f} - what the graph gives before a single ant runs"
+        )
+    built = graphs[key]
+    baseline = baselines[key]
 
-    for set_name, extra in HEURISTIC_SETS.items():
+    for set_name, heuristics in HEURISTIC_SETS.items():
+        aco_extra = {**fork["aco"], **heuristics}
         for seed in SEEDS:
             t0 = time.perf_counter()
-            _, cut, _, lab = run_once(graphs[fork_name], extra, seed, X)
+            _, cut, _, lab = run_once(built, aco_extra, seed, X)
             seconds = time.perf_counter() - t0
             rows.append(
                 {
+                    "sweep": SWEEP_NAME,
                     "dataset": "simple_blobs",
                     "variation": VARIATION,
                     "n_samples": N_SAMPLES,
                     "fork": fork_name,
                     "heuristics": set_name,
                     "seed": seed,
-                    **{f"graph_{k}": v for k, v in params.items()},
-                    **{f"aco_{k}": v for k, v in {**ACO_PARAMS, **extra}.items()},
+                    **{f"graph_{k}": v for k, v in graph_params.items()},
+                    **{f"aco_{k}": v for k, v in {**ACO_PARAMS, **aco_extra}.items()},
                     "threshold_method": THRESHOLD_PARAMS["method"],
                     "cutoff_value": cut.value,
                     "cutoff_percentile": cut.percentile,
                     **evaluate_clustering(y_true, lab),
                     **{k: v for k, v in cluster_structure(lab).items() if k != "Top5"},
+                    **baseline,
                     "seconds": seconds,
                 }
             )
+            rows[-1]["ARI_over_baseline"] = rows[-1]["ARI_all"] - baseline["baseline_ARI"]
         done = [r for r in rows if r["fork"] == fork_name and r["heuristics"] == set_name]
-        mean = float(np.mean([r["ARI_all"] for r in done]))
-        std = float(np.std([r["ARI_all"] for r in done]))
         print(
-            f"  {set_name:8} ARI_all {mean:.4f} +/- {std:.4f}   clusters {np.mean([r['Clusters'] for r in done]):.1f}"
+            f"  {fork_name:12} {set_name:8} ARI_all "
+            f"{np.mean([r['ARI_all'] for r in done]):.4f} +/- "
+            f"{np.std([r['ARI_all'] for r in done]):.4f}   "
+            f"clusters {np.mean([r['Clusters'] for r in done]):.1f}"
         )
 
 runs = pl.DataFrame(rows)
-runs.write_csv(RESULTS_DIR / "runs.csv")
-print(f"\nwritten: {RESULTS_DIR / 'runs.csv'}")
+runs_path = RESULTS_DIR / f"runs_{SWEEP_NAME}.csv"
+runs.write_csv(runs_path)
+print(f"\nwritten: {runs_path}")
 
 # %% [markdown]
 # ### Summary
 #
-# Mean and spread per cell. A difference smaller than the spread has not been
-# shown to be a difference.
+# A difference smaller than the spread has not been shown to be a difference.
 
 # %%
 summary = (
@@ -406,18 +432,24 @@ summary = (
         pl.col("Clusters").mean().alias("Clusters"),
         pl.col("NoisePct").mean().alias("NoisePct"),
         pl.col("GiantShare").mean().alias("GiantShare"),
+        pl.col("baseline_ARI").first().alias("baseline"),
+        pl.col("ARI_over_baseline").mean().alias("over_baseline"),
+        pl.col("cutoff_percentile").mean().alias("cutoff_pct"),
         pl.col("seconds").mean().alias("seconds"),
     )
-    .sort("fork", "ARI_mean", descending=[False, True])
+    .sort("ARI_mean", descending=True)
 )
 print(summary)
+print()
+print("over_baseline is what the colony added to the graph's own components.")
+print("Read it against ARI_std: a gain smaller than the seed spread is not a gain.")
 
 # %% [markdown]
 # ## 16. Grids
 #
-# One grid per cell, showing the best seed in that cell by `ARI_all`. The
-# winner is re-run rather than kept in memory - a rerun costs a fraction of a
-# second and holding every pheromone matrix does not.
+# One per cell, showing that cell's best seed by `ARI_all`. The winner is
+# re-run rather than held in memory - a rerun costs a fraction of a second,
+# keeping every pheromone matrix does not.
 
 # %%
 NOISE_GREY = [0.72, 0.72, 0.72, 1.0]
@@ -442,7 +474,11 @@ def panel_colours(labels: np.ndarray) -> tuple[np.ndarray, ListedColormap]:
 
 def draw_grid(fork_name: str, set_name: str, seed: int) -> None:
     """Four panels: input, pheromone field with its cutoff, cores, clusters."""
-    extractor, cut, clusterer_, lab = run_once(graphs[fork_name], HEURISTIC_SETS[set_name], seed, X)
+    fork = FORKS[fork_name]
+    graph_params = {**GRAPH_PARAMS, **fork["graph"]}
+    built = graphs[tuple(sorted(graph_params.items()))]
+    aco_extra = {**fork["aco"], **HEURISTIC_SETS[set_name]}
+    extractor, cut, clusterer_, lab = run_once(built, aco_extra, seed, X)
     stats = evaluate_clustering(y_true, lab)
 
     fig, axes = plt.subplots(1, 4, figsize=(20, 4.6))
@@ -475,14 +511,16 @@ def draw_grid(fork_name: str, set_name: str, seed: int) -> None:
         ax.set_xlim(X[:, 0].min() - 1, X[:, 0].max() + 1)
         ax.set_ylim(X[:, 1].min() - 1, X[:, 1].max() + 1)
 
+    aco_all = {**ACO_PARAMS, **aco_extra}
     fig.suptitle(
         f"{fork_name} / heuristics: {set_name} / seed {seed} - "
-        f"k={GRAPH_PARAMS['n_neighbors']}, evap={ACO_PARAMS['evaporation_rate']} "
-        f"({ACO_PARAMS['evaporation_schedule']}), {THRESHOLD_PARAMS['method']}",
+        f"{graph_params['metric']}, k={graph_params['n_neighbors']}, "
+        f"mutual={graph_params['mutual']}, evap={aco_all['evaporation_rate']} "
+        f"({aco_all['evaporation_schedule']}), {THRESHOLD_PARAMS['method']}",
         y=1.04,
     )
     fig.tight_layout()
-    # fig.savefig(FIGURES_DIR / f"grid_{fork_name}_{set_name}.png", bbox_inches="tight")
+    # fig.savefig(FIGURES_DIR / f"grid_{SWEEP_NAME}_{fork_name}_{set_name}.png", bbox_inches="tight")
     plt.show()
 
 

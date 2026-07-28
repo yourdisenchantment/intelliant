@@ -129,6 +129,46 @@ variation, one dataset - indicative, not established.
 never been measured. It is a third heuristic axis held silently rather than an
 absent one.
 
+**The colony has not been shown to beat its own graph.** Measured
+2026-07-28, and it is the most consequential thing found so far.
+
+The KNN graph on this dataset has 5 connected components, and those
+components alone score ARI 0.730673 against the ground truth - before a single
+ant runs. That number then appears as the *output* of the full pipeline in
+three of four fork configurations, identical on all five seeds, to six decimal
+places:
+
+| Fork | ARI +/- spread | Over the graph baseline |
+|---|---|---|
+| mutual + step | 0.778 +/- 0.064 | **+0.047** |
+| mutual + iteration | 0.731 +/- 0.000 | **0.000** |
+| OR + step | 0.731 +/- 0.000 | **0.000** |
+| OR + iteration | 0.731 +/- 0.000 | **0.000** |
+
+A seed spread of exactly zero is the signature: the ants change nothing, the
+threshold cuts nothing the graph had not already separated, and connected
+components come back untouched. The one configuration that does move adds
+0.047 with a spread of 0.064 - a gain smaller than its own noise.
+
+This does not say the method fails. Gaussian blobs are nearly separated by
+construction, so the graph alone almost solves them and there is little room
+above it. On non-convex geometry and on real embeddings the graph baseline
+will be far weaker and the colony has somewhere to contribute. **What it says
+is that nobody has been measuring whether it does.** The July calibration
+reported 0.774 without ever computing what its graph gave for free, so it is
+unknown to this day whether that number was a result or a restatement of the
+input.
+
+Every run now records `baseline_ARI` and `ARI_over_baseline`. A score that
+does not clear its own graph is not a clustering result, and the protocol
+treats it as one column rather than as a footnote.
+
+The open question, and it is a research decision rather than a measurement:
+what does the colony need in order to have room - a harder dataset where the
+graph fails, a denser graph where components do not separate on their own, or
+a threshold that cuts inside components rather than between them. The third is
+the one phase 2 was already aimed at, and it now has a reason attached.
+
 **One finding needs re-reading.** All of the above was measured before the
 `evaporation_schedule` semantics came to light. Under `"step"` the field
 decays once per ant step, so changing `path_length` silently changes the
