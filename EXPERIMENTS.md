@@ -87,22 +87,80 @@ seed.
 
 ## Seeds
 
-Every stage is seeded: `GraphBuilder` is deterministic, `PheromoneExtractor`
-takes `random_state`, and synthetic data is regenerated from a fixed seed
-rather than cached.
+Two different sources of randomness, kept apart on purpose.
 
-A single-seed number is a data point, not a result. Report a sweep across at
-least five seeds and give the spread, not only the mean - a parameter whose
-advantage is smaller than the seed-to-seed variation has not been shown to
-have one. If five is too slow for a given grid, reduce the grid rather than
-the seeds.
+**Algorithm seed.** `PheromoneExtractor` takes `random_state`; this is the
+stochasticity of the ant colony itself. The set is fixed and does not change:
+
+```
+1, 10, 100, 1000, 10000
+```
+
+Five values, always these five. Fixing them repository-wide is what makes any
+two runs comparable without re-deriving whether they were measured on the same
+footing. A run on a different seed set is not comparable with anything already
+recorded - it is a new experiment, not a data point in the old one.
+
+**Data seed.** The difficulty of the layout itself, which is a different
+question and does not belong on the same axis. It varies through the named
+dataset variations - seed and spread together, as in `s42_std0.3` - so that
+"this parameter is better" and "this layout is easier" cannot be confused.
+Synthetic data is regenerated from its seed rather than cached; `GraphBuilder`
+is deterministic and takes no seed of its own.
+
+**A single-seed number is a data point, not a result.** Report the spread
+across the five, not only the mean: a parameter whose advantage is smaller
+than the seed-to-seed variation has not been shown to have one. That check
+has already overturned a finding here - an apparent +0.21 from `alpha` turned
+out to be one lucky seed, and across five it was +0.07 with a standard
+deviation of 0.083.
+
+If five seeds make a grid too slow, cut the grid, not the seeds. A wide grid
+measured on one seed answers nothing.
+
+## Parameter grids
+
+A sweep narrows in three passes. Skipping the first produces a confident
+number from a window nobody checked.
+
+**1. Exploration - 5 or 6 values per parameter, wide.** The question at this
+stage is the *shape* of the response, not the optimum: is it flat, monotone,
+or does it have an interior peak? Three points cannot tell those apart, which
+is how a flat parameter gets mistaken for a lever and a lever for noise.
+
+**2. Narrowing - three values: both edges and one representative.** Once the
+shape is known, three points confirm it holds and bracket the optimum. This is
+where most of the grid budget is saved, and it is only safe after step 1.
+
+**3. Confirmation - the chosen value, full seed protocol.**
+
+**An optimum at the edge of the window is not an optimum.** It means the
+window was wrong: extend it and rerun that parameter. This is not a
+hypothetical - the July calibration hit it twice, with `alpha` winning at the
+bottom edge and evaporation moving to the top edge, and only the third pass
+bracketed evaporation properly at 0.07 with 0.05 and 0.09 below it on both
+sides.
+
+**Watch the arithmetic.** A full factorial is `k` values to the power of `p`
+parameters: at five values and four parameters that is 625 configurations,
+and multiplied by the variations and the five seeds it becomes five figures of
+runs. Two things make the wide grid affordable. Calibration already showed
+five of six parameters to be flat, which justifies varying one parameter at a
+time for exploration and reserving a factorial for the few suspected of
+interacting - `tau_max` and `initial_pheromone` with `alpha` are the named
+candidates. And the narrowing in step 2 collapses the survivors to three
+points before any expensive combination is run.
+
+Record the grid in the results file the same as any other parameter. A table
+that shows which value won but not which values were offered cannot be read
+later - "the best of three" and "the best of six" are different claims.
 
 ## What makes a run reportable
 
 - It ran from a clean regeneration of its data, not from a mutated kernel.
 - Its `output.txt` is next to the notebook and covers the whole run.
 - Its parameters appear in the results file, not only in the notebook.
-- Its seed set is the same as the run it will be compared against.
+- It used the standard seed set, and the grid it came from is recorded.
 
 A run that fails any of these gets rerun rather than reported with a caveat.
 Caveats do not survive into a table three months later; the number does.
@@ -207,14 +265,16 @@ can check.
 A notebook is written once but used in two phases, and confusing them fills
 the repository with noise.
 
-**While searching.** Parameters are not settled; the output exists for the
-agent to read. Print machine-readable tables, write `runs.csv`, wrap the run
-in `utils.Tee` so it lands in `output.txt`. Do not produce figures - nothing is
-settled enough to be worth drawing, and every one of them is redrawn once it
-is. Do not commit the executed
-`.ipynb` on every iteration either: the `.py` is what changes, and a rerun of
-a sweep is not a revision worth keeping. Iterate on the `.py`, and let
-`output.txt` be the deliverable the agent works from.
+**While searching.** Parameters are not settled. Print machine-readable
+tables, write `runs.csv`, wrap the run in `utils.Tee` so it lands in
+`output.txt` - that file is what the agent works from.
+
+Draw whatever you need to look at. Judging a sweep without seeing it is
+guesswork, and a plot in a cell costs nothing. What changes in this phase is
+that **nothing is saved**: no figure written to `results/`, and no executed
+`.ipynb` committed. The `.py` is what changes between iterations, and a rerun
+of a sweep is not a revision worth keeping. The only artifacts that outlive
+the iteration are the calibration tables.
 
 **Once the values are settled.** The run becomes the record. Execute the
 notebook a final time, commit the `.ipynb` with its output, and write the full
@@ -227,9 +287,14 @@ is deliberately not written yet.
 
 ## Figures
 
-Built in the settled phase only, and then for **every** variant, not only the
-ones that worked. A variant that failed is the more interesting picture, and
-it is the one nobody thinks to save.
+Drawn whenever they are worth looking at, **saved** only once the values are
+settled - and then for **every** variant, not only the ones that worked. A
+variant that failed is the more interesting picture, and it is the one nobody
+thinks to save.
+
+Everything below describes the saved figure: the one that goes into `results/`
+and possibly into an article. A throwaway plot in a cell during a sweep is not
+held to it.
 
 ### The four-panel grid
 
