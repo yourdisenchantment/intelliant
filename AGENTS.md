@@ -295,6 +295,7 @@ wrong got that way by being written down twice.
 | `DOCSTRINGS.md` | docstring conventions a linter cannot check | whoever writes one |
 | `EXPERIMENTS.md` | metrics, seeds, notebook layout, what is kept | whoever runs a notebook |
 | `ROADMAP.md` | what remains before 1.0.0, and what is already established | everyone |
+| `RESEARCH_NOTES.md` | ideas outside the roadmap; the multilevel scheme | future work |
 | `CHANGELOG.md` | what changed per release | user |
 | `CITATION.cff` | how to cite; version tracked by `cz bump` | researcher |
 
