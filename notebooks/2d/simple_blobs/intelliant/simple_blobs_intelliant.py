@@ -38,7 +38,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from matplotlib.colors import ListedColormap
-from scipy.sparse.csgraph import connected_components
 from sklearn.datasets import make_blobs
 
 # %% [markdown]
@@ -60,7 +59,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # %%
 from intelliant import CoreClusterer, GraphBuilder, PheromoneExtractor, find_threshold
-from utils import Tee, evaluate_clustering
+from utils import Tee, evaluate_clustering, graph_baseline, graph_report
 
 # %% [markdown]
 # ## 4. Paths and configuration
@@ -138,12 +137,28 @@ print("graph:", GRAPH_PARAMS)
 
 # %% [markdown]
 # ## 7. Graph
+#
+# The scan below is read before anything else in the run. It says which of the
+# two failure faces this graph has, and they are opposite: **merge**, where
+# fewer components than classes means two clusters are already joined and only
+# a cut inside a component can separate them; and **fragmentation**, where
+# isolated points and islands mean the pipeline has pieces it can reach by
+# absorption alone.
+#
+# On real embeddings this block is the only description of the graph there is -
+# the spatial figures below stop meaning anything once the data is not 2D.
 
 # %%
 t0 = time.perf_counter()
 graph = GraphBuilder(**GRAPH_PARAMS, verbose=True).build(X)
 graph_seconds = time.perf_counter() - t0
 print(f"\ngraph built in {graph_seconds:.2f}s")
+
+print("\ngraph scan:")
+for k, v in graph_report(graph).items():
+    print(f"  {k:14} {v:.4f}" if isinstance(v, float) else f"  {k:14} {v}")
+print(f"\n{N_CENTERS} true classes against the component count above.")
+print("Fewer components than classes is a merge; the threshold has to cut inside one.")
 
 # %% [markdown]
 # ## 8. Ant settings
@@ -279,6 +294,40 @@ print("\nreference: the July calibration scored mean ARI 0.774 at 1000 points.")
 print(f"this run is at {N_SAMPLES}.")
 
 # %% [markdown]
+# ### The graph alone
+#
+# The ablation: take the colony out, keep everything else, and see whether the
+# answer moves. `graph_baseline` hands the KNN graph straight to
+# `CoreClusterer` under a cutoff below its smallest edge, so nothing is
+# dropped and the graph's own components go through the same
+# `min_cluster_size` cut and the same absorption the run's output received.
+# One function, one code path, the colony subtracted.
+#
+# Two numbers come back because they answer different questions.
+# `baseline_ARI` is the components scored raw - the floor. The pipeline
+# reading is the honest comparison, since it is the same final step.
+#
+# This is only computable where there is ground truth, which is the reason the
+# synthetic sets come first. On CC3M there is nothing to score against, and a
+# pipeline returning its input unchanged looks exactly like a result.
+
+# %%
+t0 = time.perf_counter()
+base = graph_baseline(graph, y_true, cluster_params=CLUSTER_PARAMS, X=X)
+print(f"ablation run in {time.perf_counter() - t0:.2f}s\n")
+for k, v in base.items():
+    print(f"  {k:26} {v:.4f}" if isinstance(v, float) else f"  {k:26} {v}")
+
+reach = graph_report(graph, min_cluster_size=CLUSTER_PARAMS["min_cluster_size"])
+print(f"\n  {'islands below min_cluster_size':30} {reach['Islands']}")
+print(f"  {'points in them':30} {reach['IslandPoints']}")
+
+gain = metrics["ARI_all"] - base["baseline_pipeline_ARI"]
+print(f"\nthe colony added {gain:+.6f} over the same pipeline without it.")
+if abs(gain) < 1e-9:
+    print("Exactly zero: the pheromone threshold cut nothing the graph had not already cut.")
+
+# %% [markdown]
 # %% [markdown]
 # %% [markdown]
 # ## 14. What gets compared
@@ -290,10 +339,18 @@ print(f"this run is at {N_SAMPLES}.")
 # and `evaporation_schedule`, the two remaining forks that alter what the ants
 # walk on and how the field decays.
 #
-# Every graph also reports its **baseline**: the ARI of its own connected
-# components, computed before any ant runs. Without it a score cannot be read -
-# a pipeline that hands back the graph's components unchanged looks like a
-# result and is not one.
+# Every graph is scanned and ablated before any ant runs on it. The scan says
+# what the graph is; the ablation says what it already achieves. Without the
+# second, a score cannot be read - a pipeline that hands back the graph's
+# components unchanged looks like a result and is not one.
+#
+# Two baselines land in every row. `baseline_ARI` is the components scored
+# raw, and `baseline_pipeline_ARI` is the same graph through the same
+# `min_cluster_size` cut and the same absorption the run received, so the only
+# difference left between it and the run is the colony. `over_pipe` is
+# therefore the number that answers "did the ants do anything", and
+# `over_baseline` is kept beside it because the earlier results were recorded
+# against it.
 #
 # **Heuristic sets** collapse to `none` here. The previous pass ran the full
 # 2x2 across the metric fork and found every difference between the sets
@@ -355,6 +412,7 @@ def run_once(built_graph, aco_extra: dict, seed: int, features: np.ndarray):
 
 graphs = {}
 baselines = {}
+scans = {}
 rows = []
 
 for fork_name, fork in FORKS.items():
@@ -363,15 +421,20 @@ for fork_name, fork in FORKS.items():
     if key not in graphs:
         t0 = time.perf_counter()
         graphs[key] = GraphBuilder(**graph_params, verbose=False).build(X)
-        n_comp, comp = connected_components(graphs[key], directed=False)
-        baselines[key] = {
-            "baseline_components": n_comp,
-            "baseline_ARI": evaluate_clustering(y_true, comp)["ARI_all"],
-        }
+        scan = graph_report(graphs[key], min_cluster_size=CLUSTER_PARAMS["min_cluster_size"])
+        baselines[key] = graph_baseline(graphs[key], y_true, cluster_params=CLUSTER_PARAMS, X=X)
         print(f"\ngraph {dict(fork['graph'])} built in {time.perf_counter() - t0:.2f}s, {graphs[key].nnz:,} edges")
         print(
-            f"  baseline: {n_comp} connected components, ARI_all "
-            f"{baselines[key]['baseline_ARI']:.4f} - what the graph gives before a single ant runs"
+            f"  scan: {scan['Components']} components, giant share {scan['GiantShare']:.3f}, "
+            f"{scan['Isolated']} isolated, {scan['Islands']} islands holding {scan['IslandPoints']} points"
+        )
+        print(f"  sizes: {scan['CompTop5']}")
+        scans[key] = {f"scan_{k}": v for k, v in scan.items() if k != "CompTop5"}
+        print(
+            f"  baseline: components alone ARI_all {baselines[key]['baseline_ARI']:.4f}, "
+            f"through the same final step {baselines[key]['baseline_pipeline_ARI']:.4f} "
+            f"({baselines[key]['baseline_pipeline_clusters']} clusters) - "
+            f"what this graph gives before a single ant runs"
         )
     built = graphs[key]
     baseline = baselines[key]
@@ -398,11 +461,13 @@ for fork_name, fork in FORKS.items():
                     "cutoff_percentile": cut.percentile,
                     **evaluate_clustering(y_true, lab),
                     **{k: v for k, v in cluster_structure(lab).items() if k != "Top5"},
+                    **scans[key],
                     **baseline,
                     "seconds": seconds,
                 }
             )
             rows[-1]["ARI_over_baseline"] = rows[-1]["ARI_all"] - baseline["baseline_ARI"]
+            rows[-1]["ARI_over_pipeline_baseline"] = rows[-1]["ARI_all"] - baseline["baseline_pipeline_ARI"]
         done = [r for r in rows if r["fork"] == fork_name and r["heuristics"] == set_name]
         print(
             f"  {fork_name:12} {set_name:8} ARI_all "
@@ -433,7 +498,9 @@ summary = (
         pl.col("NoisePct").mean().alias("NoisePct"),
         pl.col("GiantShare").mean().alias("GiantShare"),
         pl.col("baseline_ARI").first().alias("baseline"),
+        pl.col("baseline_pipeline_ARI").first().alias("baseline_pipe"),
         pl.col("ARI_over_baseline").mean().alias("over_baseline"),
+        pl.col("ARI_over_pipeline_baseline").mean().alias("over_pipe"),
         pl.col("cutoff_percentile").mean().alias("cutoff_pct"),
         pl.col("seconds").mean().alias("seconds"),
     )
@@ -442,7 +509,8 @@ summary = (
 print(summary)
 print()
 print("over_baseline is what the colony added to the graph's own components.")
-print("Read it against ARI_std: a gain smaller than the seed spread is not a gain.")
+print("over_pipe is the same against the ablation - the graph through the same final step.")
+print("Read both against ARI_std: a gain smaller than the seed spread is not a gain.")
 
 # %% [markdown]
 # ## 16. Grids
