@@ -163,6 +163,21 @@ Every run now records `baseline_ARI` and `ARI_over_baseline`. A score that
 does not clear its own graph is not a clustering result, and the protocol
 treats it as one column rather than as a footnote.
 
+**The comparison was sharpened on 2026-07-29.** The table above compares the
+pipeline's output against raw connected components, but the pipeline's output
+also passes the `min_cluster_size` cut and absorption - so two different last
+steps were being compared. `utils.graph_baseline` now runs the graph itself
+through `CoreClusterer` under a cutoff below its smallest edge, leaving the
+colony as the only difference, and every run records that reading as
+`baseline_pipeline_ARI` alongside the raw one. On simple blobs the two
+coincide, because the graph has no islands for absorption to reach; where it
+has, they will not. The table above stands - it was measured against the
+weaker baseline, and the sharper one can only lower the gains, not raise
+them.
+
+Alongside it, `utils.graph_report` scans every graph before the ants run and
+records the component structure that decides which failure face a run has.
+
 The open question, and it is a research decision rather than a measurement:
 what does the colony need in order to have room - a harder dataset where the
 graph fails, a denser graph where components do not separate on their own, or
@@ -211,8 +226,9 @@ the parameters.
 - [ ] `find_threshold` option to exclude clamp spikes - the real-data fix.
 - [ ] Scan-based `find_threshold` (`method="scan"`): pick the cutoff by giant
       collapse or `n_cores` plateau. Addresses both faces.
-- [ ] Graph-statistics diagnostic - components, giant share, islands - for
-      real-data connectivity.
+- [x] Graph-statistics diagnostic - components, giant share, islands - for
+      real-data connectivity. Done as `utils.graph_report`, outside the
+      package; whether it belongs inside is an open API question.
 
 ## Phase 3 - real datasets -> `1.0.0a1`
 

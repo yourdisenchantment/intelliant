@@ -73,6 +73,25 @@ This block carries the weight on real data, where the spatial figures are
 meaningless and the size distribution is the whole picture. A giant component
 is a size-distribution phenomenon and shows up nowhere else.
 
+## Every graph is scanned before anything runs on it
+
+`utils.graph_report` describes the object the ants are about to walk on: node
+and edge counts, degree range, isolated points, the component count, the
+largest component's share, singletons, and islands below `min_cluster_size`
+together with the points held in them.
+
+It is read first because it names which of the two failure faces a run is
+about to have, and they are opposite. **Merge** - fewer components than
+classes - means two clusters are already joined and only a cut inside a
+component separates them. **Fragmentation** - isolated points and islands -
+means the pipeline has pieces it can reach by absorption alone. A parameter
+that helps one hurts the other, so a result read without knowing which one is
+present is read blind.
+
+On real embeddings this block is the only description of the graph there is.
+The spatial figures stop meaning anything the moment the data is not 2D; the
+scan does not.
+
 ## The graph baseline is recorded on every run
 
 Before any ants run, the KNN graph already has connected components, and those
@@ -81,6 +100,23 @@ components are already a clustering. Every run records what they score:
 - `baseline_components` - how many the graph has;
 - `baseline_ARI` - what they score against the ground truth;
 - `ARI_over_baseline` - the run's score minus that.
+
+**The comparison has to use the same final step, or it is not one.** The four
+columns above stop at the raw components, while the colony's output also
+receives the `min_cluster_size` cut and absorption - two different last steps
+being compared. `utils.graph_baseline` closes that by handing the graph itself
+to `CoreClusterer` under a cutoff below its smallest edge: nothing is dropped,
+the graph's own components go through the identical code path, and the only
+difference left between the two numbers is the colony. That reading is
+`baseline_pipeline_ARI`, and `ARI_over_pipeline_baseline` is what answers
+whether the ants did anything. The raw pair is kept beside it because the
+results already recorded use it.
+
+This is an ablation in the ordinary sense - remove the part under
+investigation, keep everything else identical, see whether the answer moves -
+and it is computable only where there is ground truth. That is the reason the
+synthetic sets come first: on CC3M there is nothing to score against, and a
+pipeline returning its input unchanged looks exactly like a result.
 
 **A result that does not clear its own baseline is not a result.** This is not
 hypothetical: on 10000-point blobs three of four fork configurations returned
@@ -105,6 +141,7 @@ the row carries:
 - every parameter that was **fixed**, if the sweep is meant to be compared
   with another one - otherwise the two tables cannot be joined
 - the metric set above
+- the graph scan, prefixed `scan_`, and both baselines
 - runtime, in seconds
 
 Multi-seed runs go in one file with `seed` as a column, never in one file per
