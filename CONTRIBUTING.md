@@ -147,10 +147,23 @@ push. `--frozen` matters too - it refuses a `uv.lock` that disagrees with
   receives merges from `dev` at a release.
 - `dev` - active development. Pull requests target `dev`.
 
-`main` carries the library and every document that states how the project
-works. It does not carry `notebooks/` or `results/` - the experiments are
-research apparatus rather than part of the published package, and they would
-grow without bound in the one place meant to stay readable.
+**`main` carries the shipped package and nothing else** - the library, its
+tests, and the files a user or a packaging tool needs to install, cite and
+understand it. Everything that exists to develop or justify the library stays
+on `dev`: the experiments, the literature record, the roadmap and research
+notes, the protocols, and the agent instructions. They are research apparatus,
+they grow without bound, and the one branch meant to stay readable is not
+where they belong.
+
+What crosses over, and it is the whole list: `src/`, `tests/`, `pyproject.toml`,
+`uv.lock`, `.github/`, `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`,
+`CITATION.cff`, `LICENSE`, `.gitignore`, `.pre-commit-config.yaml`,
+`DOCSTRINGS.md` - the last because this file links to it, and a shipped
+document with a dangling link is a defect this repository has already had
+once.
+
+What does not: `notebooks/`, `results/`, `literature/`, `utils/`, `AGENTS.md`,
+`EXPERIMENTS.md`, `LITERATURE.md`, `ROADMAP.md`, `RESEARCH_NOTES.md`.
 
 That makes the two branches diverge permanently, so a release merge is no
 longer a fast-forward:
@@ -158,7 +171,8 @@ longer a fast-forward:
 ```bash
 git checkout main
 git merge --no-commit --no-ff dev
-git rm -r -f --ignore-unmatch notebooks results
+git rm -r -f --ignore-unmatch notebooks results literature utils \
+  AGENTS.md EXPERIMENTS.md LITERATURE.md ROADMAP.md RESEARCH_NOTES.md
 git commit --no-edit
 git checkout dev
 ```
