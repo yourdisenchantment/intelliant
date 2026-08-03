@@ -147,23 +147,32 @@ push. `--frozen` matters too - it refuses a `uv.lock` that disagrees with
   receives merges from `dev` at a release.
 - `dev` - active development. Pull requests target `dev`.
 
-**`main` carries the shipped package and nothing else** - the library, its
-tests, and the files a user or a packaging tool needs to install, cite and
-understand it. Everything that exists to develop or justify the library stays
-on `dev`: the experiments, the literature record, the roadmap and research
-notes, the protocols, and the agent instructions. They are research apparatus,
-they grow without bound, and the one branch meant to stay readable is not
-where they belong.
+**`main` carries everything a reader of the project needs, and nothing that
+only the people building it need.** The library, its tests, the experiments
+and their results are all part of what the project is, and a visitor who
+wants to know whether the method works should be able to open the notebooks
+that measured it.
 
-What crosses over, and it is the whole list: `src/`, `tests/`, `pyproject.toml`,
-`uv.lock`, `.github/`, `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`,
-`CITATION.cff`, `LICENSE`, `.gitignore`, `.pre-commit-config.yaml`,
-`DOCSTRINGS.md` - the last because this file links to it, and a shipped
-document with a dangling link is a defect this repository has already had
-once.
+What stays on `dev` is the working apparatus: the documents that instruct an
+agent, define a protocol or hold an unfinished plan, and the literature record
+while the survey is still running. None of it tells a user anything about the
+library; all of it would have to be read past to reach what does.
 
-What does not: `notebooks/`, `results/`, `literature/`, `utils/`, `AGENTS.md`,
-`EXPERIMENTS.md`, `LITERATURE.md`, `ROADMAP.md`, `RESEARCH_NOTES.md`.
+What crosses over: `src/`, `tests/`, `notebooks/`, `results/`, `utils/`,
+`pyproject.toml`, `uv.lock`, `.github/`, `README.md`, `CONTRIBUTING.md`,
+`CHANGELOG.md`, `CITATION.cff`, `LICENSE`, `.gitignore`,
+`.pre-commit-config.yaml`, `DOCSTRINGS.md` - the last because this file links
+to it, and a shipped document with a dangling link is a defect this repository
+has already produced once.
+
+What does not: `literature/`, `AGENTS.md`, `EXPERIMENTS.md`, `LITERATURE.md`,
+`ROADMAP.md`, `RESEARCH_NOTES.md`.
+
+**The exclusion is a decision about timing, not about secrecy.** The
+literature record and the roadmap carry the novelty-gap analysis and the
+negative results, and they are published when the survey is finished rather
+than while it is half-run. Moving one of them across later is a one-line
+change to the recipe below, so nothing here forecloses it.
 
 That makes the two branches diverge permanently, so a release merge is no
 longer a fast-forward:
@@ -171,7 +180,7 @@ longer a fast-forward:
 ```bash
 git checkout main
 git merge --no-commit --no-ff dev
-git rm -r -f --ignore-unmatch notebooks results literature utils \
+git rm -r -f --ignore-unmatch literature \
   AGENTS.md EXPERIMENTS.md LITERATURE.md ROADMAP.md RESEARCH_NOTES.md
 git commit --no-edit
 git checkout dev

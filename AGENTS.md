@@ -279,9 +279,12 @@ remembers why it was put there.
 | `tmp/` | working files for the maintainer and the agent, high rotation | no |
 | `.github/` | CI, release workflow, issue and PR templates | yes |
 
-`notebooks/` and `results/` are empty for now; the calibration work has not
-started. They stay out of `main` when it does - see the merge recipe in
-CONTRIBUTING.md.
+`notebooks/` and `results/` are part of what the project is and ship with it.
+What does not reach `main` is this file and its neighbours - the protocols,
+the roadmap, the research notes and the literature record - because they
+instruct whoever builds the library rather than telling anyone how to use it.
+The exact lists and the merge recipe are in CONTRIBUTING.md, and that is the
+only place they are stated.
 
 ### The documents, and what each one owns
 
