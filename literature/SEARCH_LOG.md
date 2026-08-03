@@ -19,7 +19,7 @@ off by thresholding the pheromone field?
 |---|---|
 | `ant colony optimization graph clustering pheromone threshold` | Hu 2015 "Multiple Pheromone Table ACO for Clustering" (Wiley) - uses a pheromone threshold to split patterns, but pheromone update is driven by a clustering objective (compactness/variance), and ants operate on a complete graph over *patterns*, not a sparse kNN graph. Also KohonAnts (SOM-hybrid), L-NNACO, ant K-means - all objective-driven variants. |
 | `ACO community detection pheromone density edges` | ACODIG and multi-objective ACO community detection - explicit objective functions (density/purity, modularity). Sadi/Etaner-Uyar/Gunduz-Oguducu 2009 (full text retrieved, see Sources) - ants find cliques, pheromone reflects clique-membership score, output feeds a modularity-maximizing algorithm afterward. Not a raw pheromone-threshold read. |
-| `ant colony algorithm k-nearest neighbor graph clustering` | L-NNACO (Gao 2016) restricts ant moves to each point's L nearest neighbors but keeps the objective-function ACO loop (cluster variance) - closest kNN-graph-based ACO found, still not thresholded. Ant K-means: pheromone updates driven by total cluster variance. |
+| `ant colony algorithm k-nearest neighbor graph clustering` | **[CORRECTED in pass 2: L-NNACO is Tseng, Chiang & Yang, ICMLC 2013, not Gao 2016]** L-NNACO restricts ant moves to each point's L nearest neighbors but keeps the objective-function ACO loop (cluster variance) - closest kNN-graph-based ACO found, still not thresholded. Ant K-means: pheromone updates driven by total cluster variance. |
 | `pheromone-based edge weighting community detection` | PGPPR (pheromone-guided personalized PageRank) - different diffusion mechanism (PageRank, not ant walks), and a random-walk edge-centrality pre-processing step feeding a separate community algorithm - not itself a threshold-and-read scheme. |
 | `swarm intelligence graph partitioning pheromone accumulation` | AntPaP (Elazar & Bruckstein) - pheromone marks encode idle-time/cover-time to partition a graph among patrolling agents; no objective function, but the read-out is territorial ownership, not a scalar pheromone-density threshold, and there is no kNN-graph construction stage. Closest "no-objective-function + pheromone" hit found in the whole search; recorded in full under Sources. |
 
@@ -169,3 +169,158 @@ seen incidentally through pages that referenced them. This is a real gap
 against LITERATURE.md's "a search that used one database is not a survey"
 standard and should be closed with tool/access the maintainer has (e.g.
 institutional Scopus/IEEE access) before this is treated as a complete search.
+
+
+---
+---
+
+# Pass 2 - 2026-07-29
+
+
+Date run: 2026-07-29. Appends to `literature/SEARCH_LOG.md`; does not
+overwrite it. Per LITERATURE.md: every query, and what it returned, including
+the ones that returned nothing.
+
+## Which databases were actually reached, and which were not
+
+This is the part pass 1 could not write. Stated plainly.
+
+| Database | Reached directly? | How, or why not |
+|---|---|---|
+| **IEEE Xplore** | **yes** | Searched directly in the maintainer's Chrome, seven queries, results and abstracts read on the publisher's own pages. Search and abstracts are open; **full text is not** - no institutional session is active on that browser ("Institutional Sign In" / "Personal Sign In" are both offered, and `stamp.jsp` bounces back to the record page for subscription content). |
+| **OpenAlex** | **yes** | REST API, unauthenticated. Used for title/abstract field search and for forward citation tracing. Indexes Crossref, PubMed, DOAJ, arXiv and MAG; comparable in scale to Scopus, and it is the database that produced the decisive hit. |
+| **Crossref** | **yes** | REST API. Used for DOI verification and for authoritative bibliographic fields. |
+| **Semantic Scholar** | **partly** | Graph API worked for per-DOI lookups; the search endpoint returned HTTP 429 (rate limit) and was not retried. |
+| **Unpaywall** | **yes** | REST API, used to establish open-access status for each paywalled item rather than guessing. |
+| **SpringerLink** | **abstracts only** | Chapter pages fetched successfully (via the redirect chain through `idp.springer.com`); full text paywalled. Refused by the browser extension's navigation policy. |
+| **ACM Digital Library** | **NO** | Blocked on every available route. `WebFetch` → HTTP 403. `curl` with a browser user agent → HTTP 403 (Cloudflare bot protection). The browser extension refuses `dl.acm.org` with "Navigation to this domain is not allowed". **Still not queried directly. This gap is unchanged from pass 1.** |
+| **Scopus** | **NO** | `www.scopus.com` refused by the extension's navigation policy. Requires an institutional session in any case. |
+| **Web of Science** | **NO** | `www.webofscience.com` refused by the extension's navigation policy. Same. |
+| **CyberLeninka** | **NO** | `cyberleninka.ru` refused by the extension's navigation policy - so this pass did not even reach the CAPTCHA that stopped pass 1. |
+| **eLibrary.ru** | **NO** | Not reached; same navigation policy. |
+| **Google Scholar** | **NO** | `scholar.google.com` refused by the extension's navigation policy. |
+| **arXiv** | **NO (browser)** | `arxiv.org` refused by the extension; not needed this pass, since the target literature is not on arXiv. |
+| **Wiley Online Library** | **NO** | HTTP 402 to `WebFetch`; `onlinelibrary.wiley.com` refused by the extension. Hindawi's own `downloads.hindawi.com` returns 403 to curl and WebFetch. |
+
+**On the maintainer's browser.** It is connected and working - one Chrome
+instance, macOS, local. But its navigation allowlist currently permits only
+`ieeexplore.ieee.org` out of every domain this search needed. Every other
+publisher, index and Russian-language database was refused at the extension
+level before any page load, so none of them ever presented a login or a
+CAPTCHA. **No CAPTCHA was attempted and no credential was entered anywhere.**
+
+## Category A - novelty (pheromone-threshold clustering). IEEE Xplore, direct.
+
+Run against IEEE Xplore's own search, results read on the publisher's pages.
+
+| # | Query (IEEE Xplore syntax) | Hits | What came back |
+|---|---|---|---|
+| A1 | `("ant colony" AND clustering AND pheromone AND threshold)` | 27 | Mostly image thresholding by ACO, WSN routing, and grid-based ant clustering. **One structural hit: "Data clustering by ant colony on a digraph" (Chen, Tu, Chen, ICMLC 2005).** Also "A Novel Ant-based Clustering Algorithm with an Attractive Force Field" (Zhang & Cao 2010), "Clustering PPI Data Based on ACO" (Lei et al. 2013), "Automatic threshold selection based on ACO" (Ye et al. 2005, image thresholding). |
+| A2 | `("ant colony" AND ("nearest neighbor graph" OR "k-nearest neighbor graph" OR "knn graph") AND clustering)` | **2** | "Beyond Predefined Clusters: A Comprehensive Review of Clustering Methods for Unknown Numbers of Clusters" (TKDE 2026, a review) and "Hierarchical Laplacian Score for unsupervised feature selection" (IJCNN 2018). **Neither is an ACO method operating on a kNN graph.** |
+| A3 | `(pheromone AND "connected components" AND clustering)` | **1** | Exactly one document in the whole database, and it is the Chen/Tu/Chen digraph paper again. |
+| A4 | `("ant colony" AND "community detection" AND pheromone)` | 7 | He et al. 2011, Javadi et al. 2014, Mu et al. 2014, Chang et al. 2013, Song et al. 2014 - all modularity- or fitness-driven, consistent with pass 1. One new item of interest: **"Clustering Social Networks Using Competing Ant Hives" (Held, Dockhorn, Krause, Kruse, ENIC 2015)** - hive-specific pheromone on nodes, no objective function evident. Recorded as source #11. |
+| A5 | `(pheromone AND ("graph clustering" OR "graph partitioning") AND "ant")` | 8 | Mesh partitioning (Korošec et al. 2003), vertex bisection (Feng 2025), Blum's ACO tutorial, a patrolling paper (Doi 2013), the Held hive paper again, and a fusion/fission partitioning metaheuristic (Bichot 2006). **No pheromone-threshold read-out.** |
+| A6 | (earlier, exploratory) `("ant colony" AND clustering AND pheromone AND threshold)` restricted follow-ups on individual records | - | Abstracts read for: `document/1527216` (digraph), `document/6890869` (L-NNACO). Both full texts blocked by sign-in. |
+
+**Finding for Category A, and it is not the finding pass 1 recorded.**
+IEEE Xplore, queried directly rather than incidentally, returns the mechanism
+this project describes as new. It returns it from a 2005 conference paper, and
+query A3 returns *nothing else in the database*. Following that paper forward
+(Category H below) reached the 2014 journal paper that implements the full
+pipeline on a kNN graph.
+
+## Category B - the digraph line, traced forward. OpenAlex.
+
+Forward citation tracing on the two 2005 digraph papers, since LITERATURE.md
+asks for citations followed both ways.
+
+| Query | Returned |
+|---|---|
+| OpenAlex `filter=cites:W2104268471` (cites the ICMLC 2005 digraph paper) | 7 works. Six are unrelated applications. The seventh is **Kang, M.-S. & Choi, Y.-S. (2014), "Ant Colony Hierarchical Cluster Analysis", Journal of Internet Computing and Services 15(5):95-105, DOI 10.7472/jksii.2014.15.5.95, open access.** |
+| OpenAlex `filter=cites:W1515003038` (cites the ICNC 2005 A3CD paper) | 14 works. Nanda & Panda's 2014 survey in Swarm and Evolutionary Computation; **Handl & Meyer (2007), "Ant-based and swarm-based clustering", Swarm Intelligence 1(2):95-113** - which corrects pass 1's bibliographic record for that survey; Zhang & Cao's kernel and Rényi-entropy ant clustering papers; the Marinakis GRASP/ACO cluster; "A Graphic Clustering Algorithm Based on MMAS" (Yang, Li, Bo, CEC 2006). |
+| OpenAlex `title_and_abstract.search:pheromone AND "connected components"` | **8 works worldwide.** Three of them are the Chen/Tu/Chen trilogy (ICMLC 2005, ICNC 2005 A3CD, LNCS 2006 dynamic database); one is Kang & Choi 2014; two are a 2026 Zenodo duplicate pair unrelated to clustering; the remaining two are a GPU-ACO paper and a cognitive-radio routing paper. **That eight-item set is the entire visible field for this phrasing.** |
+| OpenAlex `title_and_abstract.search:pheromone AND threshold AND clustering AND graph` | 9. Kang & Choi 2014 again; "Telecommunication calling circles detecting algorithm based on ant colony optimization", Journal of Yangzhou University 2009 (same institution as Chen/Tu - possibly a Chinese-language sibling of the digraph work, **not retrieved**); the rest are eLife editorial records with no bearing. |
+| OpenAlex `title_and_abstract.search:ant AND "similarity graph" AND clustering` | 2, neither relevant (a 2003 ISMIS proceedings volume; a Greek-language thesis). |
+| OpenAlex `title_and_abstract.search:"pheromone" AND "k-nearest"` | 30, all feature selection, TSP or classification hybrids. **No ACO clustering that walks a kNN graph.** |
+| OpenAlex `title_and_abstract.search:ants AND clustering AND "no objective function"` | 94, none matching - the phrase matches loosely and the results are ordinary objective-driven ACO clustering. |
+| OpenAlex `search=ant colony pheromone threshold graph clustering connected components` (relevance search) | 919, dominated by rule-induction and routing ACO. Relevance ranking is citation-weighted and did not surface the digraph line; the field-restricted `title_and_abstract.search` above did. Recorded because it shows why a generic search misses this. |
+| OpenAlex `search=pheromone accumulation edges k-nearest neighbor graph clustering ants` | 76, nothing relevant. |
+| OpenAlex `search=ant colony clustering without objective function pheromone field` | 3099, nothing relevant - generic swarm-optimisation results. |
+
+## Category C - Otsu 1979, priority 1.
+
+| Query / action | Returned |
+|---|---|
+| Crossref API `works/10.1109/TSMC.1979.4310076` | Resolves. Title "A Threshold Selection Method from Gray-Level Histograms", author Nobuyuki Otsu, container "IEEE Transactions on Systems, Man, and Cybernetics", vol. 9, issue 1, pp. 62-66, published-print 1979-01, publisher IEEE, ISSN 0018-9472 / 2168-2909, 32,967 citing works. **DOI verified.** |
+| `https://doi.org/10.1109/TSMC.1979.4310076` via WebFetch | HTTP 302 to `ieeexplore.ieee.org/document/4310076`. **DOI resolution verified.** |
+| IEEE Xplore record `document/4310076` in the maintainer's browser | Same fields displayed, same DOI echoed. **Publisher record verified.** |
+| `ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=4310076` | Served `04310076.pdf` in the browser's PDF viewer. (Note the contrast with the 2005 conference paper, which bounced back to its record page - IEEE evidently serves this legacy item without a subscription.) |
+| WebSearch `Otsu 1979 "A Threshold Selection Method from Gray-Level Histograms" pdf` | Surfaced a Tel Aviv lecture-notes PDF that is *not* the paper (21 pages of slides) - discarded. |
+| Direct probe of five candidate mirrors | Three returned byte-identical 5-page PDFs (3,152,839 bytes): `web-ext.u-aizu.ac.jp/course/bmclass/documents/otsu1979.pdf`, `cw.fel.cvut.cz/wiki/_media/courses/a6m33bio/otsu.pdf`, `engineering.purdue.edu/kak/computervision/ECE661.08/OTSU_paper.pdf`. Two 404'd. **Full text obtained and read.** |
+
+**Finding.** The DOI is confirmed. The paper does **not** say Otsu's method
+degrades on non-bimodal histograms - that claim, which pass 1 took from
+secondary web sources, describes the valley-seeking methods Otsu is replacing.
+His stated caveat is about multithresholding with many classes. He also
+defines an affine-invariant separability measure η* ∈ [0,1] that falls out of
+the same computation, and explicitly extends the method beyond images to "any
+histogram of some characteristic (or feature) discriminative for classifying
+the objects". Details in SOURCES_PASS2.md #5.
+
+## Category D - the two "nearest competitors" from pass 1.
+
+| Query / action | Returned |
+|---|---|
+| WebSearch `Hu 2015 "multiple pheromone table" ant colony optimization clustering Wiley` | Identified as Hu, Tsai, Chiang & Yang, "A Multiple Pheromone Table Based Ant Colony Optimization for Clustering", Mathematical Problems in Engineering 2015, art. 158632, DOI 10.1155/2015/158632. |
+| Fetch attempts on Hu 2015 full text | `onlinelibrary.wiley.com/doi/10.1155/2015/158632` → 402. `downloads.hindawi.com/.../158632.pdf` → 403 (curl and WebFetch). `www.hindawi.com/journals/mpe/2015/158632/` → 402. Browser extension refuses the domain. **Abstract only**, obtained from the publisher-registered abstract via OpenAlex. |
+| WebSearch `L-NNACO ant colony optimization clustering "nearest neighbors"` | **Pass 1's attribution was wrong.** L-NNACO is Tseng, Chiang & Yang, ICMLC 2013, DOI 10.1109/ICMLC.2013.6890869 - not Gao 2016. |
+| IEEE Xplore `document/6890869` | Abstract read on the publisher page. Full text behind sign-in. |
+| WebFetch `pmc.ncbi.nlm.nih.gov/articles/PMC4709600/` (Gao 2016) | Confirms Gao 2016 is a different algorithm ("data reactor" model, Lumer-Faieta lineage) with **no pheromone update mechanism** and no L-nearest-neighbour restriction. |
+| WebFetch `informatica.si/.../download/2672/1384` (Lucky & Girsang 2020, NNACOC) | **Open access full text retrieved.** Gives the ACOC family's objective function verbatim - Δτ = 1/F, F = SSE of Euclidean distances (or sum of cosine distances for text) - plus the elitist deposit rule ("only n-best ants ... usually 20%"), the object×cluster pheromone table, and the requirement that k be supplied. |
+
+**Finding.** Neither pass-1 "nearest competitor" is close. Both belong to the
+Shelokar ACOC lineage: each ant constructs a complete cluster-assignment
+string, the assignment is scored by an explicit objective, and only the best
+20% of ants deposit. The kNN element in L-NNACO is a computation shortcut
+inside solution construction, not a graph the ants walk. Neither thresholds a
+pheromone field. **The threat to the novelty claim is Kang & Choi 2014, not
+these.**
+
+## Category E - Deneubourg / Lumer-Faieta.
+
+| Query / action | Returned |
+|---|---|
+| Reference list of Kang & Choi 2014 (retrieved in full) | Ref [3]: Deneubourg, J.-L., Goss, S., Franks, N., Sendova-Franks, A., Detrain, C., and Chretien, L., "The dynamics of collective sorting: Robot-like ants and ant-like robots", Proc. First Int. Conf. on Simulation of Adaptive Behavior: From Animals to Animats 1, 1991, pp. 356-365, MIT Press. Ref [4]: Lumer, E. and Faieta, B., "Diversity and adaptation in populations of clustering ants", Proc. Third Int. Conf. SAB, pp. 501-508, MIT Press. **Both citations now traceable to a document read this session; neither primary text obtained.** |
+| `cse.wustl.edu/~yixin.chen/public/a4c.pdf` | Open PDF of Chen, Xu & Chen (2004), "An Adaptive Ant Colony Clustering Algorithm", ICMLC 2004 pp. 1387-1392. Retrieved in full. A grid/cellular-automaton model in the Deneubourg-LF lineage, no pheromone. Useful as a freely readable primary description of that branch. |
+| Attempt to list `cse.wustl.edu/~yixin.chen/public/` for the digraph papers | HTTP 403, no directory listing. |
+| `eprints.bournemouth.ac.uk/20910/1/Boryczka2009.pdf` (Boryczka, "Finding groups in data: Cluster analysis with ants", Applied Soft Computing 2009 - the paper pass 1 attributed to Handl & Meyer) | Every route failed: `curl` returned exit code 000 twice (connection not established from this sandbox), `WebFetch` returned "Socket is closed" twice, the browser extension refuses the domain. **Not retrieved.** Recorded because the file is open access and one retrieval from the maintainer's own machine would close it. |
+| Probes for a free Handl & Meyer 2007 survey PDF | Three guessed URLs at Manchester and CMU: all 404. Not open access per OpenAlex. **Not retrieved.** |
+
+## Category F - Chinese and Korean language leads.
+
+| Query | Returned |
+|---|---|
+| WebSearch `"ant colony" clustering digraph 陈崚 涂立 有向图 蚁群 聚类 强连通分量` | Nothing. General ACO blog posts and a TSP paper. CNKI was not reachable. |
+| WebSearch `Chen Tu "ant-cluster" pheromone digraph "strong connected components" clustering algorithm pdf` | Only the two paywalled 2005 records again, plus the Chircop & Buckingham multiple-pheromone paper. |
+| (incidental, via OpenAlex) | "Telecommunication calling circles detecting algorithm based on ant colony optimization", Journal of Yangzhou University, 2009 - same institution as Chen/Tu, no DOI, **not retrieved**. Possible Chinese-language sibling of the digraph work. |
+| Korean: Kang & Choi 2014 | Retrieved in full from `koreascience.kr` (open access). Body is Korean; abstract, equations, both algorithm listings, results table and reference list all readable. This is the pass's principal source. |
+
+## Category G - Russian-language sources.
+
+**Nothing was run.** CyberLeninka, eLibrary and Google Scholar were all
+refused by the browser extension's navigation policy before any page load, so
+this pass got *less* far than pass 1, which at least reached CyberLeninka's
+CAPTCHA. The three CyberLeninka titles pass 1 recorded remain unretrieved.
+No CAPTCHA was attempted. This category is now the second-largest gap in the
+record after ACM DL, and it needs the maintainer to open the pages.
+
+## Stop condition
+
+Stopped when the field-restricted OpenAlex searches, the IEEE Xplore searches
+and the forward citation traces all converged on the same eight-work set
+around `pheromone + connected components`, and when three consecutive
+formulations returned nothing new. Saturation, not a count.
+
+The one thing that would change the picture is the full text of the two 2005
+Chen/Tu digraph papers, which would settle whether their pheromone update
+carries a quality term. That is a retrieval, not another query.

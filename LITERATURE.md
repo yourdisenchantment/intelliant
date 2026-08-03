@@ -32,10 +32,19 @@ answer it silently for that source alone.
 ## Where it goes
 
 ```
-literature/SOURCES.md      cumulative, one entry per source
-literature/SEARCH_LOG.md   cumulative, one dated section per pass
-literature/QUESTIONS.md    what the current pass needs from the maintainer
+literature/SOURCES.md        cumulative, one entry per source
+literature/SEARCH_LOG.md     cumulative, one dated section per pass
+literature/QUESTIONS.md      what the current pass needs from the maintainer
+literature/RETRIEVAL_LIST.md what is still to be obtained, and how far each
+                             identifier has been verified
+literature/pdf/              the documents themselves - gitignored, because
+                             they have rights holders
 ```
+
+**Starting a session on this?** Read `RETRIEVAL_LIST.md` first - it says what
+is missing and what is already held, so nothing is fetched twice. Then the
+Corrections block at the top of `SOURCES.md`, which lists what earlier passes
+recorded wrongly. Only then the protocol below.
 
 Versioned, for the same reason results are: losing the search log costs more
 than losing the sources, because the log is what makes a negative result an

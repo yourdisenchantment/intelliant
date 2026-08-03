@@ -67,6 +67,11 @@ notebooks/**/output.txt
 # Session artifacts (working notes, drafts, migration staging)
 tmp/
 
+# Retrieved papers. The RECORD of a source is versioned; the document itself
+# is not - it has a rights holder, and a public repository is not the place
+# for it. Names map to entries in literature/SOURCES.md.
+literature/pdf/
+
 # Agent and assistant tooling. A local setup is fine; none of it belongs in
 # the repository. AGENTS.md is the deliberate exception - it defines how an
 # agent must behave here and most tools read it. Which assistant a
