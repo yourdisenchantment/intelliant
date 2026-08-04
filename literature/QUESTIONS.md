@@ -6,6 +6,29 @@ deleted file.
 
 ---
 
+# Pass 6 - 2026-08-04
+
+## 1. RESOLVED. `literature/` stays on `dev`, does not merge to `main`.
+
+**Question, as it stood** (noted in the now-archived
+`tmp/done/2026-08-04_literature-complete/COWORK_BRIEF.md`): whether
+`literature/` goes to `main` at all, given the search log and `SOURCES.md`
+contain the novelty-gap analysis (prior art predating this project by up to
+nine years), and `main` is the public branch.
+
+**Your answer:** literature stays on `dev`.
+
+**Nothing to change** - this is already exactly what `CONTRIBUTING.md`'s
+branch-policy section states (`literature/`, `AGENTS.md`, `EXPERIMENTS.md`,
+`LITERATURE.md`, `ROADMAP.md`, `RESEARCH_NOTES.md` listed under "what does
+not" cross to `main`), and confirmed directly against the repository:
+`git ls-tree main` has no `literature/` path. The open question was never a
+gap between policy and practice, only an unconfirmed assumption that the
+general policy also covered this specific, more sensitive directory. It
+does, by your own confirmation now on record.
+
+---
+
 # Pass 5 - 2026-08-03
 
 You supplied a second batch of eight distinct PDFs in `tmp/pdf/` this pass
