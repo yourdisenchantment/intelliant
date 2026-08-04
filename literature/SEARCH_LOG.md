@@ -324,3 +324,325 @@ formulations returned nothing new. Saturation, not a count.
 The one thing that would change the picture is the full text of the two 2005
 Chen/Tu digraph papers, which would settle whether their pheromone update
 carries a quality term. That is a retrieval, not another query.
+
+---
+---
+
+# Pass 3 - 2026-08-03
+
+Run from `tmp/COWORK_BRIEF.md`. Databases used this pass: direct web fetch
+(general HTTP, not routed through a browser extension), WebSearch (aggregated
+web search), arXiv (direct), Semantic Scholar Graph API, Crossref API,
+Unpaywall API, ResearchGate (search page only - blocked, see below), IEEE
+Xplore (document pages only - blocked, see below). Order followed: Section A
+re-check first, then E2/E3, then B, then C, then D, per
+`literature/RETRIEVAL_LIST.md`.
+
+## Category A - re-confirming the Chen/Tu/Chen digraph line (A3-A5)
+
+| Query / action | Returned |
+|---|---|
+| WebSearch `Chen Tu Chen "Data clustering by ant colony on a digraph" ICMLC 2005 pdf` | Only the same IEEE Xplore record (`document/1527216`) and unrelated ACO papers - no open PDF surfaced. |
+| WebSearch `"A Novel Ant Clustering Algorithm with Digraph" A3CD Chen Tu Chen 2005 pdf` | Only the SpringerLink chapter page - no open PDF. |
+| WebSearch `"An Ant Clustering Method for a Dynamic Database" Chen Tu Chen 2006 pdf` | Only the SpringerLink chapter page - no open PDF. |
+| Direct fetch `ieeexplore.ieee.org/document/1527216` | Empty/client-rendered shell - no body content returned. |
+| Direct fetch `ieeexplore.ieee.org/rest/document/1527216` | Empty - same result. |
+| Direct fetch `link.springer.com/chapter/10.1007/11539117_163` | **Abstract returned** (publisher meta-description), matching what P2-3 already recorded verbatim. No full text - "Access this chapter" / institutional login wall. |
+| Direct fetch `link.springer.com/chapter/10.1007/11739685_18` | **Abstract returned**, matching P2-4... except P2-4 recorded this one as "metadata only, abstract not obtained." **This pass obtained the abstract pass 2 did not get.** See correction note below. |
+| Semantic Scholar `DOI:10.1109/ICMLC.2005.1527216` | Abstract field elided by publisher (`CLOSED`), confirming no open abstract via this route either. |
+| Unpaywall, all three DOIs (`10.1109/ICMLC.2005.1527216`, `10.1007/11539117_163`, `10.1007/11739685_18`) | `is_oa: false` for all three, `oa_locations: []`. No open-access copy exists anywhere Unpaywall indexes, for any of the three. |
+| Direct fetch, ResearchGate search page (`researchgate.net/search?q=Chen+Tu+Chen+digraph+ant+clustering`) | Publication records located (RG IDs 4184256 for the ICMLC paper, 221161764 for the ICNC paper) but the publication pages themselves (`researchgate.net/publication/4184256...`, `.../221161764...`) returned empty - ResearchGate requires JavaScript to render article pages; this session's fetch tool cannot execute it. |
+
+**Finding.** No new access route found this pass. All three Chen/Tu/Chen
+papers remain in the same state pass 2 left them: A4/A5 (SpringerLink chapters)
+at abstract-only (this pass corrects P2-4 to abstract-obtained, see below), A3
+(IEEE) with no abstract obtainable through any route tried, including
+Semantic Scholar's own elided-abstract notice. **The two full texts remain the
+single highest-value retrieval left on this list and require the
+maintainer's own institutional session**, exactly as pass 2 concluded.
+
+**Addendum, same day, in-browser check.** The maintainer asked whether
+Sci-Hub (three mirror domains), a torrent tracker (nnmclub.to), Semantic
+Scholar, SciSpace, and an unfamiliar domain ("gaiforresearch.com") could be
+used to close this gap. Sci-Hub and nnmclub were declined outright - both
+distribute copyrighted material without rights-holder authorization, which
+`LITERATURE.md`'s own rule against "looking for a mirror that skips" an
+access barrier already forecloses independent of that. The unfamiliar domain
+was not visited without knowing what it is first. Semantic Scholar's own web
+page for the ICMLC paper (`semanticscholar.org/paper/.../b2019c9bda...`) was
+opened directly in the browser: no PDF badge, no abstract shown beyond the
+same AI-generated one-line TLDR already visible via the API, "View on IEEE"
+the only full-text link offered - confirms, rather than changes, what the API
+already returned. SciSpace's literature-review search page requires account
+sign-up before returning results; no account was created (out of scope, and
+would not have produced a primary-source PDF in any case - it is a
+summarization tool over the same closed abstracts, not a new source). No new
+finding from this addendum.
+
+**Correction to P2-4.** P2-4 (`literature/SOURCES.md`) states the abstract of
+`10.1007/11739685_18` was "not obtained." This pass fetched the same
+SpringerLink URL and received the publisher's abstract directly (quoted in
+full in `SOURCES.md` P2-2 through P2-4's surrounding text was not edited, so
+this note stands as the correction - see the environment note at the end of
+this pass's `SOURCES.md` section for why the same URL behaved differently
+across sessions). The abstract text: "We propose an adaptive ant colony data
+clustering algorithm for a dynamic database... Some edges with less pheromone
+are progressively removed under a list of thresholds in the process. Strong
+connected components of the final digraph are extracted as clusters." This
+does not change the Bearing already recorded for A5 - it was already assumed
+edge-level per the task's leads - but it is now a directly retrieved
+statement rather than an inference.
+
+## Category E2/E3 - MABA
+
+| Query | Returned |
+|---|---|
+| WebSearch `"Multi-layer Ant-Based Algorithm" MABA clustering graph` | Immediately surfaced `arxiv.org/abs/1303.4711` and the WorldScientific record for the same DOI (`10.1142/S0219525912500361`), plus a search-engine paraphrase of the abstract describing the "layer and rule" multilevel scheme. |
+| WebSearch `"MABA" ant colony hierarchical clustering supernode community detection` | Same arXiv/WorldScientific pair surfaced again, confirming saturation on the first query already. |
+| Direct fetch `arxiv.org/abs/1303.4711` | **Full abstract retrieved verbatim**, matching the WebSearch paraphrase exactly - confirms the paraphrase was not a hallucination. Journal reference given on the page itself: *Advances in Complex Systems*, 2012, 15(08):1250036, DOI 10.1142/S0219525912500361 - i.e. this is the identical work RETRIEVAL_LIST.md lists as E3 with "correspondence to the lead not established." |
+| Direct fetch `arxiv.org/pdf/1303.4711` | **Full text retrieved** (18 pages). Read in full for Sections 1-4. See `SOURCES.md` P3-1. |
+
+**Finding.** E2 and E3 are the same paper. No separate "MABA" publication
+exists beyond this one; the acronym is simply the paper's own name for its
+multilevel scheme. This is the single most consequential finding of this
+pass - see `SOURCES.md` P3-1 and `QUESTIONS.md` pass 3.
+
+## Category B - Boryczka line and Deneubourg/Lumer-Faieta (bibliographic only, not re-attempted)
+
+| Query / action | Returned |
+|---|---|
+| Direct fetch `eprints.bournemouth.ac.uk/20910/1/Boryczka2009.pdf` | **Full text retrieved.** Same URL failed twice in pass 2 with connection-level errors ("Socket is closed", curl exit 000); succeeded on the first attempt here. See `SOURCES.md` P3-2 and the pass-3 environment note. |
+| Semantic Scholar `DOI:10.1016/j.asoc.2013.07.012` (Boryczka corrigendum) | Metadata only - title, venue, year, single author; abstract field elided by publisher. |
+| Unpaywall `10.1016/j.asoc.2013.07.012` | `is_oa: false`, no OA location. |
+| Direct fetch `sciencedirect.com/science/article/pii/S1568494613002470` | Empty - no content returned (client-rendered / access-gated). |
+| Crossref `works/10.1016/j.asoc.2013.07.012` | Confirms single-page item (p. 4229), explicitly linked via `associatedlink` to DOI 10.1016/j.asoc.2008.03.002 (the 2009 paper it corrects). |
+| Semantic Scholar `DOI:10.1109/ISDA.2006.253963` | No result - wrong DOI guessed; abandoned in favour of the DOI already on file. |
+| Crossref `works/10.1109/isda.2006.151` (the DOI already recorded in RETRIEVAL_LIST.md) | **Resolved.** Boryczka, U. (2006), "Finding Groups in Data: Cluster Analysis with Ants", ISDA 2006, Jinan, pp. 404-409, IEEE, 18 references, reference list overlaps with the 2009 paper's (Deneubourg, Lumer-Faieta, Handl & Meyer 2002 all cited). Confirms this is the earlier conference statement of the same ACA method. |
+
+**Finding.** Boryczka 2009 (B4) is now read in full and confirmed as a
+Lumer-Faieta-lineage grid method, correctly placed in Section B, not Section
+A - no bearing on novelty. The corrigendum (B5) remains unread; the ISDA 2006
+conference version (B6) remains bibliography-only. Deneubourg 1991 (B1) and
+Lumer & Faieta 1994 (B2) were not re-attempted this pass - both are MIT Press
+proceedings volumes already established (P2-13, P2-14) as unreachable by any
+open-web route; nothing new was tried against them.
+
+## Category C - non-ant relatives
+
+| Query / action | Returned |
+|---|---|
+| Semantic Scholar `DOI:10.1214/07-ps094` (Pemantle 2007) | **Full abstract + Gold OA PDF location** (`projecteuclid.org`, CC-BY). |
+| Semantic Scholar `DOI:10.1109/tpami.2005.113` (Fred & Jain 2005) | Abstract elided by publisher; no OA location per the same query's `openAccessPdf.status: CLOSED`. |
+| Semantic Scholar `DOI:10.7155/jgaa.00124` (Walktrap, JGAA version) | No result returned (empty response) - JGAA's own site apparently not indexed under this DOI in Semantic Scholar's graph, or the query timed out silently. |
+| Direct fetch `jgaa.info/getPaper?id=124` | Empty - no content returned. |
+| WebSearch `Pons Latapy "Computing communities in large networks using random walks" JGAA abstract` | Surfaced the arXiv long-version URL (`arxiv.org/pdf/physics/0512106`) among others; the search tool's own paraphrase of the abstract was cross-checked against a direct fetch (next row) rather than trusted on its own. |
+| Direct fetch `arxiv.org/abs/physics/0512106` | **Full abstract retrieved verbatim**, matching the WebSearch paraphrase - confirms it was accurate. Used as the primary source for P3-5 instead of the JGAA version, which this session could not reach directly. |
+| Semantic Scholar `DOI:10.1073/pnas.0706851105` (Infomap) | Full abstract + GREEN OA arXiv location (`arxiv.org/abs/0707.0609`). |
+| Semantic Scholar `DOI:10.1088/1742-5468/2008/10/p10008` (Louvain) | Full abstract + GREEN OA arXiv location (`arxiv.org/abs/0803.0476`). |
+| Semantic Scholar `DOI:10.1038/s41598-019-41695-z` (Leiden) | Full abstract + Gold OA full text at nature.com. |
+| Semantic Scholar `DOI:10.1007/978-3-642-37456-2_14` (HDBSCAN) | Abstract elided by publisher; `openAccessPdf.status: CLOSED`. |
+| Unpaywall `10.1109/tpami.2005.113` | `is_oa: false`, no OA location. Confirms Fred & Jain 2005 has no open copy anywhere Unpaywall indexes. |
+
+**Finding.** Four of eight Section-C items now have a directly-retrieved
+abstract (Walktrap, Infomap, Louvain, Leiden), all with open full text
+available for a future pass. Two (HDBSCAN, Fred & Jain) remain metadata-only
+- Fred & Jain in particular is flagged in `RETRIEVAL_LIST.md` as the most
+important line in this section and is still unread in any pass. C1
+(van Dongen/MCL) and C2/C3 (Walktrap, both DOI forms) were already
+established in earlier passes or this one; no further action needed on C1.
+
+## Category D - self-reinforcing walks
+
+| Query / action | Returned |
+|---|---|
+| Semantic Scholar `DOI:10.1214/07-ps094` | (Same call as under Category C - Pemantle serves both a comparison-set role and the theory-branch role.) Full abstract + Gold OA PDF. |
+
+**Finding.** D1 (Pemantle 2007) has a retrieved abstract and a freely
+available full text (no paywall, no login) that was not transcribed this
+pass for time reasons - the natural next step, not a blocked retrieval. D2-D3
+(Merkl & Rolles) were not attempted this pass; `RETRIEVAL_LIST.md` says to
+fetch them on D1's guidance rather than blind, and D1's full text has not yet
+been read closely enough to say which parts of D2/D3 matter.
+
+## Stop condition
+
+Stopped for this pass after E2/E3 resolved (the single item COWORK_BRIEF.md
+flagged as most likely to change project direction), A3-A5 were re-confirmed
+with no new access, and one abstract-level pass was made through the rest of
+B/C/D. Sections F (Otsu - already held) and G (Russian-language sources) were
+not attempted this pass; G in particular remains exactly where pass 2 left
+it - see `QUESTIONS.md` pass 3 for what is still outstanding.
+
+## Addendum 2 - same day, in-browser CyberLeninka + Google Scholar check
+
+The maintainer asked whether Chrome could open CyberLeninka and Google
+Scholar directly. Both opened normally in this session - **no CAPTCHA on
+CyberLeninka, no allowlist block on either** (contrast with pass 2, where the
+extension's navigation allowlist refused both domains before any page load).
+
+| Query / action | Returned |
+|---|---|
+| CyberLeninka search: `муравьиная колония кластеризация феромон порог` | 6 real results, all readable (no CAPTCHA): image segmentation via ant colonies (2013, 2015), a multi-agent TSP clustering-algorithm synthesis paper (2018), a resource-partitioning survey mentioning ACO among several metaheuristics (2024), a population-algorithm-structures survey (2022), a PSO+ACO multi-agent TSP paper (2025). **None is a close mechanism match** (pheromone-threshold-components on a similarity graph). |
+| CyberLeninka search, exact-phrase, for each of the four titles pass 1 recorded as "surfaced by CyberLeninka" | **Zero results for all four**, tried as full titles and as shortened core phrases. See the correction in `RETRIEVAL_LIST.md` Category G. |
+| Google Scholar: `ant colony clustering digraph pheromone threshold connected components` | **New finds, not seen in any earlier pass's OpenAlex/Crossref/IEEE sweeps**: Qin, Chen, Pan & Chen (2006), *BMC Bioinformatics* 7(S4):S24, DOI 10.1186/1471-2105-7-S4-S24 - open access, fetched and read in full, see `SOURCES.md` P3-13. Also surfaced (not retrieved, unverified): Tu, Chen & Shen (2007), *J. Systems Science & Information*; Qin, Luo, Chen, Guo & Chen (2006), conference version of the BMC paper. Also re-surfaced, already on file: the two 2005 digraph papers themselves, the 2006 dynamic-database paper, Yang/Li/Bo/Shao's MMAS graphic-clustering paper (already noted via OpenAlex in pass 2), and Pacheco et al. 2018 / Mu et al. 2019 (both already known, general ACO-clustering/community-detection, not the same lineage). |
+
+**Finding.** Google Scholar's relevance ranking reached sources the
+field-restricted OpenAlex queries in pass 2 did not, because they share the
+mechanism but not the exact indexed terminology (an application paper on
+phylogenetics, not a "clustering" paper by title). This is a real gap in
+earlier passes' database coverage - worth remembering that no single
+database's search syntax is a complete substitute for a differently-ranked
+one, exactly per `LITERATURE.md`'s point about surveying multiple databases.
+No CAPTCHA was attempted anywhere in this addendum; Sci-Hub, its mirrors, and
+a torrent tracker the maintainer separately asked about were declined before
+any of this and not used.
+
+---
+
+# Pass 4 - 2026-08-03
+
+## Not a search - a library retrieval
+
+No queries were run this pass. The maintainer retrieved eight PDFs directly
+from their university's institutional library access, following the priority
+order this project handed back at the end of pass 3 (Section A first, then
+B/C gaps), and placed them in `tmp/pdf/`. This session's job was entirely
+identification and recording, not searching - recorded here anyway, per
+`LITERATURE.md`'s instruction to record how every held document was obtained,
+not only how every query resolved.
+
+| File (as supplied) | Identified as | Method |
+|---|---|---|
+| `lingchen2005.pdf` | A3 - Chen, Tu, Chen (2005), *Data clustering by ant colony on a digraph*, ICMLC 2005 | Read in full; matched against the page header/footer text ("Proceedings of the Fourth International Conference on Machine Learning and Cybernetics, Guangzhou, 18-21 August 2005") and the existing DOI/venue record in `RETRIEVAL_LIST.md` |
+| `chen2005.pdf` | A4 - Chen, Tu, Chen (2005), *A Novel Ant Clustering Algorithm with Digraph* (A3CD), ICNC 2005 | Read in full (11 pages - the reading tool's page-count cap required an explicit page-range re-read after the first attempt errored); matched against running header "L. Chen, L. Tu, and H. Chen" and page range 1218-1228 |
+| `chen2006.pdf` | A5 - Chen, Tu, Chen (2006), *An Ant Clustering Method for a Dynamic Database*, LNAI 3930 | Read in full; matched against the "D.S. Yeung et al. (Eds.): ICMLC 2005, LNAI 3930, pp. 169-178, 2006" header on page 1 |
+| `VX-001986_30-11-2016_11-27-20_abbyy.pdf` | B1 - Deneubourg et al. (1991), *The Dynamics of Collective Sorting* | Read in full; an ABBYY OCR scan (French-diacritic garbling throughout, body text intact) matched against the title page's own handwritten source annotation |
+| `fred2005.pdf` | Fred & Jain (2005), *Combining Multiple Clusterings Using Evidence Accumulation*, IEEE TPAMI | Read in full (16 pages - same page-count-cap re-read as `chen2005.pdf`); matched against the journal masthead and DOI already on file |
+| `boryczka2013.pdf` | B5 - Boryczka (2013) corrigendum to *Finding groups in data* | Read in full (1 page) |
+| `campello2013.pdf` | C7 - Campello, Moulavi, Sander (2013), HDBSCAN, PAKDD | Read in full (13 pages) |
+| `campello2015.pdf` | C7 companion - Campello, Moulavi, Zimek, Sander (2015), ACM TKDD | Read partially (20 of 51 pages - the reading tool's per-request page cap was used deliberately rather than exhausted across multiple calls, since sections 1-5.1 already duplicate `campello2013.pdf`'s content and the remaining sections (semi-supervised extraction, GLOSH) are not needed for anything currently claimed) |
+
+**A caution recorded for future passes: filenames in a maintainer-supplied
+batch are not a reliable index.** `lingchen2005.pdf` and `chen2005.pdf` do
+not name the papers they contain - the identification above was done by
+reading each file's own header/footer text against the DOI and venue already
+recorded in `RETRIEVAL_LIST.md`/`SOURCES.md`, not by trusting the name on
+disk. See `SOURCES.md`'s pass 4 "READ THIS FIRST" for the full mapping.
+
+**Outcome.** This single retrieval closes more of the retrieval list's
+open gaps than the three prior web-search passes combined: A3-A5 (the
+project's single highest-priority target since pass 1), B1 (open since pass
+1), B5/the corrigendum, and C7/C8 (both "metadata only" since pass 3) are all
+now full text. See `SOURCES.md` P4-1 through P4-8 for the entries, and
+`QUESTIONS.md` for the one finding (A3≈A4, near-duplicate publication) that
+needs the maintainer's judgment rather than this project's own.
+
+## Addendum - same day, D1 follow-up
+
+| Query / action | Returned |
+|---|---|
+| Fetch `projecteuclid.org/.../10.1214/07-PS094.full` (the host `RETRIEVAL_LIST.md` pointed to for D1, Pemantle's reinforcement survey) | Blocked by an Incapsula bot-detection challenge (`_Incapsula_Resource`). Not attempted further - routing around bot detection is against this project's own rule and this session's operating rules alike. |
+| `WebSearch: Pemantle "A survey of random processes with reinforcement" arxiv pdf` | Confirmed arXiv:math/0610076 (same DOI, same paper, Probability Surveys 2007 vol.4 pp.1-79) as a Gold OA alternative to the blocked projecteuclid host. |
+| Fetch `arxiv.org/pdf/math/0610076` | Succeeded - no barrier. Extraction ran to page 35 of 79 before the fetch tool's own output cut off; read in full up to that point (`SOURCES.md` P4-9). Pages 36-79 (including Section 5, the ERRW/VRRW-on-general-graphs material) not yet read. |
+
+This was not requested by the maintainer this pass - it closed itself out as
+the one remaining item on the retrieval list that was open-access but simply
+unread, while answering the maintainer's "is there anything else needed"
+question.
+
+## Addendum 2 - same day, D2/D3 follow-up (continuing while the maintainer searches for other items)
+
+| Query / action | Returned |
+|---|---|
+| Unpaywall lookup, `10.1214/009117905000000396` (D2) and `10.1214/ecp.v16-1683` (D3) | D2: bronze OA, arXiv:math/0501137 (submitted version) available with no barrier. D3: gold OA (CC-BY, DOAJ-listed journal) but Unpaywall's only location is `projecteuclid.org` - no arXiv or repository mirror exists for this one. |
+| Fetch `arxiv.org/pdf/math/0501137` (D2) | Succeeded, no barrier. Extraction cut off at 856 lines (mid-Section 3.2 of 5) - same tooling limit as the Pemantle survey (P4-9), not a paywall. Read as far as the cutoff (`SOURCES.md` P4-10). |
+| Fetch `projecteuclid.org/.../10.1214/ECP.v16-1683.pdf` (D3) | Blocked by an Incapsula bot-detection challenge - identical barrier to the one D1/P4-9 hit on the same host. Not pursued further. `WebSearch` for an arXiv mirror of this specific paper found none. Recorded as not retrieved (`SOURCES.md` P4-11), with the search-snippet-only abstract clearly marked as unverified. |
+
+Net effect: D2 now has a citable primary-source definition and framing; D3
+remains a title-and-abstract-only lead, blocked by the same projecteuclid
+bot-gate as D1's primary host, not by any real paywall.
+
+## Addendum 3 - same day, A8/A9 follow-up after the maintainer's library search came back empty
+
+The maintainer searched their university library for A8 and A9 (the two
+unverified Google Scholar leads from pass 3) and found neither. Per this
+project's own "a lead is not a source" rule, this was checked further rather
+than accepted as the final word on either.
+
+| Query | Returned |
+|---|---|
+| `WebSearch: Tu Chen Shen "Adaptive Clustering Algorithm by Ants' Optimization" "Journal of Systems Science and Information"` | No matching result - only unrelated ant-clustering papers (Anari 2018, Gao 2016, etc.), none confirming A8. |
+| `WebSearch: 涂莉 陈玲 蚁群 自适应聚类算法 系统科学与信息学报` (Chinese-language retry, on the theory that the journal's Chinese name might surface a CNKI record) | No match. One tangential hit (a different "adaptive ant clustering algorithm" on Baidu Xueshu, different enough not to be treated as the same paper). |
+| Crossref bibliographic query for A8's title/authors | Empty result set. |
+| `WebSearch: Qin Luo Chen Guo Chen "Phylogenetic tree construction" "self adaptive ant colony algorithm" 2006` | Found a specific match: IEEE Computer Society CSDL, proceedings-article `04021071`, conference code `ichit/2006`, with a fuller 6-author list (adds Yi Pan, missing from the pass-3 record). |
+| Fetch `computer.org/csdl/proceedings-article/ichit/2006/04021071/...` | Client-rendered shell, no metadata extracted (same failure mode as other IEEE/ACM pages in this project). |
+| DBLP search API and plain DBLP search page, both for A8 and A9 titles | Both returned empty content to this session's fetch tool - inconclusive, not treated as a negative result (likely a fetch-tool limitation on this host, not evidence either way). |
+
+**Outcome, recorded in `SOURCES.md`'s P3-13 addendum and `RETRIEVAL_LIST.md`:
+A9 is corroborated (real paper, better citation, worth a second library
+search); A8 remains uncorroborated by anything beyond the original
+snippet, and is now the weaker of the two leads - not worth further library
+time without a sharper citation first.**
+
+---
+
+# Pass 5 - 2026-08-03
+
+## Not a search - a second batch of maintainer-supplied PDFs
+
+No queries were run this pass either. The maintainer placed nine further
+files in `tmp/pdf/` (eight distinct, one exact duplicate - `blum2007.pdf` and
+`blum2007 (1).pdf`), obtained partly through their institution and, by the
+maintainer's own account, partly via Sci-Hub for the maintainer's own use.
+This project did not access Sci-Hub, any mirror, or any similar site at any
+point in this pass or any other - the files arrived in the shared folder
+exactly as pass 4's library batch did, and this session's job remained
+identification and recording by reading each file, not by trusting a
+filename or asking how any individual file was obtained. Recorded here per
+`LITERATURE.md`'s instruction to record how every held document was
+obtained.
+
+| File (as supplied) | Identified as | Method |
+|---|---|---|
+| `An Adaptive Ant Colony Clustering Algorithm.pdf` | A6 (reclassified to B7) - Chen, Xu, Chen (2004), ASM/A⁴C, ICMLC 2004 | Read in full (6 pages); matched against the running header and page range 1387-1392. Full text revealed a grid/agent method with no pheromone at all, contradicting the secondhand description this project had carried since pass 2 - see `SOURCES.md` P5-1 and the Section-A note in `RETRIEVAL_LIST.md`. |
+| `Diversity and adaptation in populations of clustering ants.pdf` | B2 - Lumer & Faieta (1994), SAB3, MIT Press | Read in full (10 pages); matched against the MIT CogNet watermark and page range 501-508, closing a gap open since pass 1 |
+| `Improved-affinity-propagation-clustering-algorithms-a-PSO-based-approach.pdf` | Sinha & Jana (2025), *Improved Affinity Propagation Clustering Algorithms: A PSO-Based Approach*, Knowledge and Information Systems | Read partially (16 of 31 pages - enough to establish scope); no ants, no pheromone anywhere - PSO tuning Affinity Propagation's parameters. Recorded as a false lead, `SOURCES.md` P5-8 |
+| `a-new-clustering-method-based-on-ant-colony-algorithm.pdf` | New - Yang, Sun, Huang (2002), 4th World Congress on Intelligent Control and Automation | Read in full (5 pages, bilingual English/Chinese); not previously on any list. `SOURCES.md` P5-3 |
+| `an-adaptive-ant-based-clustering-algorithm-with-improved-198iq5b9l1.pdf` | New - El-Feghi, Errateeb, Ahmadi, Sid-Ahmed (2009), AACA, IEEE SMC 2009 | Read in full (8 pages); not previously on any list. `SOURCES.md` P5-4 |
+| `blum2007.pdf` (+ duplicate `blum2007 (1).pdf`, not read separately) | New - Blum (2007), *Ant Colony Optimization: Introduction and Hybridizations*, HIS 2007 | Read in full (6 pages); a classical-ACO tutorial, not a clustering paper - recorded as a background/definitional reference, `SOURCES.md` P5-5 |
+| `gong2009.pdf` | New - Gong, Xu, Zhang, Liu (2009), IEEE SMC 2009 | Read in full (6 pages); uses K-means as a diagnostic *inside* a continuous-ACO optimizer - the reverse of ant-colony clustering. Recorded as a false lead, `SOURCES.md` P5-6 |
+| `zhao2007.pdf` | New - Zhao (2007), *An Ant Colony Clustering Algorithm*, ICMLC 2007 | Read in full (6 pages); a fitness-driven, solution-construction ACO method, architecturally distinct from every prior category. `SOURCES.md` P5-7 |
+
+**Two reclassification/false-lead findings this pass, both important for
+what they rule out rather than what they add.** (1) A6, carried in
+`RETRIEVAL_LIST.md` Section A since pass 2 on a secondhand description, is
+not a pheromone/digraph method at all once read in full - it is moved to
+Section B. (2) Two of the eight files (Gong 2009, Sinha & Jana 2025) matched
+this project's search terms ("ant"/"swarm" + "clustering") but are, on
+inspection, not ant-colony-clustering algorithms at all - one uses K-means
+inside an ACO optimizer, the other uses PSO to tune a non-ACO clustering
+algorithm (Affinity Propagation). Recording these as false leads, rather
+than silently discarding them, is the same principle `LITERATURE.md` asks
+for negative search results generally.
+
+**On method, for the record.** The maintainer stated directly this pass that
+some of these files came via Sci-Hub and pressed for this project to use
+Sci-Hub itself for future keyword-based retrieval. This was declined, for
+the same reason it was declined earlier in the conversation: this project
+does not access piracy/mirror sites regardless of the argument for their
+usefulness, independent of what the maintainer does with their own access.
+No CAPTCHA was attempted and no credential was entered anywhere in this
+pass.
+
+---
+
+# Pass 6 - 2026-08-04
+
+## Not a search - one file, supplied after being flagged as a gap
+
+The HSE research-proposal draft (see `tmp/вкр/research_proposal_Mikheev.txt`)
+named Hierarchical Density Shaving as a comparison method Kang & Choi cite
+as their own baseline, and flagged that this project had never independently
+identified the primary source. The maintainer supplied `tmp/pdf/gupta2006.pdf`
+directly in response. Read in full and confirmed: Gupta, Liu & Ghosh (2006),
+ICDMW'06 - see `SOURCES.md` P6-1. Closes the gap the proposal draft flagged.
