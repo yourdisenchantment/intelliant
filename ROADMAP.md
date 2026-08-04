@@ -245,6 +245,57 @@ the parameters.
 `ARI_all` leads these tables. The abstention rates will differ, which is the
 case it exists for.
 
+## Positioning, decided 2026-08-03 - after a five-pass literature review
+
+**The core flat mechanism is not novel, and the claim should not be framed
+as one.** Pheromone on digraph edges, no objective function, threshold,
+connected/strongly-connected components as the result - this exists since
+Chen, Tu & Chen (2005) and was independently re-arrived-at by Kang & Choi
+(2014), whose algorithm matches this one on every structural point (weighted
+directed kNN graph, density x pheromone transition rule, no-fitness deposit,
+threshold, strongly connected components, even a percentile threshold
+sweep). Full account in `literature/SOURCES.md` P2-1 and P4-1, and the
+open question this raises for how the dissertation should describe its
+prior art in `literature/QUESTIONS.md` (Pass 2, #1).
+
+**Reframed claim: not "new mechanism", but "competitive at a fraction of the
+resources, argued from the mechanism's own structure."** Classical ACO/GA/PSO
+clustering scores a full candidate solution every iteration (SSE, silhouette,
+modularity); this mechanism never does - iteration cost is sparse-graph edge
+traversal plus a local pheromone update, nothing else. That absence of a
+fitness evaluation is the reason to expect cheaper, more parallelizable,
+numba-friendly iterations, and is the argument the efficiency claim should
+rest on rather than generic "it's fast" language. Any efficiency claim needs
+both a wall-clock/memory benchmark and a per-iteration complexity argument -
+wall-clock alone conflates algorithm structure with implementation quality.
+
+**Comparison methodology, two tiers, not to be conflated in the writeup:**
+1. Reference, single-machine CPU implementations - `leidenalg`, `networkx`
+   Louvain/Leiden, HDBSCAN. Fair fight for the current numba/CPU
+   implementation; this is Phase 4 below.
+2. GPU-engineered implementations - GVE-Leiden, cuGraph/RAPIDS Leiden (400M+
+   edges/sec on multi-billion-edge graphs; genuinely used in production for
+   fraud-ring detection, recommendation systems, RAG indexing - unlike any
+   ACO-based graph clusterer, which has no evidence of production deployment
+   anywhere). Comparing against these before this project has equivalent GPU
+   engineering is methodologically unsound and will draw exactly that
+   criticism from a reviewer. Keep the two comparisons reported separately.
+
+**Multi-architecture plan, staged, not started yet.** Build and benchmark
+the base (current numba/CPU) implementation first - that is Phases 1-4
+below. Only after that is complete: add other architectures (GPU via
+hand-written `numba.cuda` kernels, or a higher-level route - CuPy,
+RAPIDS cuGraph, PyTorch/JAX - if the mechanism can be reformulated as
+array/tensor operations), and re-run the full benchmark suite after each
+addition. This will require repackaging the current modules into a proper
+library layout rather than the present experimentation-script structure.
+GPU work specifically needs manual kernel design (thread/block/grid
+indexing, explicit host-device memory transfer, atomic pheromone updates
+where concurrent ants touch the same edge) - it is not something that falls
+out of the existing CPU code automatically.
+
+---
+
 ## Phase 5 - publication -> `1.0.0`
 
 - [ ] Habr article, reviewed by ML-adjacent channel admins.

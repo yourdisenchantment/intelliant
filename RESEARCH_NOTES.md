@@ -230,17 +230,59 @@ we look").
 
 ### Relation to literature
 
+**Updated 2026-08-03 - the systematic search this section used to call for
+has now been done (five passes, see `literature/`).** The answer: the
+coarsen-and-repeat *structure* itself is not new, even within work that
+already touches this project's own base mechanism.
+
 The approach belongs to the family of **multilevel graph clustering** /
 **hierarchical graph coarsening**, known since the late 1990s (METIS,
 Karypis & Kumar 1998). Modern representatives are Louvain (2008), Leiden
-(2019). The basic coarsening idea is not new.
+(2019) - both perform exactly the "found community becomes a vertex of the
+next-level graph, repeat" step this scheme proposes. Closer still: He et al.
+(2012/2013), *An Ant-Based Algorithm with Local Optimization for Community
+Detection in Large-Scale Networks* (MABA, arXiv:1303.4711, full text read -
+`literature/SOURCES.md` P3-1) - an *ant-based* method that already does the
+identical coarsen-and-repeat step, in its own words: "reapplied to a higher
+level network where each detected community is regarded as a new vertex."
+Full account and the question this raises for the roadmap in
+`literature/QUESTIONS.md` Pass 3 #1.
 
-What is potentially new is the **collapse mechanism via ACO** with
-preservation of pheromone structure between levels (through graph
-compression, not through the pheromone values themselves). A systematic
-literature review of this aspect has not been conducted; a confident claim
-of novelty requires searching the ACO-clustering branch and hybrid ACO +
-hierarchical methods.
+**What does not survive as a claim:** "coarsen found clusters into
+supernodes and repeat" as a structural contribution on its own - Louvain got
+there in 2008, MABA in 2012.
+
+**What still might, narrower than originally hoped:** every coarsen-and-repeat
+example found (Louvain, Leiden, MABA) is driven throughout by an explicit
+objective function (modularity). This scheme's base level has none. So the
+one place this idea still has room is not "we coarsen and repeat" but
+"we coarsen and repeat *on top of a mechanism with no objective function
+anywhere*, including at the base level" - paired with the same efficiency
+argument as the flat version (see `ROADMAP.md`, "Positioning, decided
+2026-08-03"): no per-level fitness evaluation, cheaper iterations, argued
+from the mechanism's structure rather than asserted. The "collapse via
+black-hole absorption" mechanism described below (merging the ants and
+absorption stages into the centroid-as-absorber rule) is itself not checked
+against prior art yet - it is a narrower, more specific mechanic than plain
+coarsening, and a targeted search ("has anyone merged local absorption with
+immediate contraction into supernodes in a single pass") has not been run.
+Not chasing that novelty question by default, per the same decision made for
+the flat version - only worth running if this scheme's positioning ends up
+resting on it rather than on the efficiency argument.
+
+**No evidence this mechanism (or ACO-based graph clustering generally) is
+used in production anywhere**, checked directly (web search, 2026-08-03) -
+generic "ACO market" results are low-quality market-report content about
+routing/scheduling, not clustering, and GitHub has only small academic/hobby
+implementations. Leiden, by contrast, is genuine production infrastructure -
+built into graph databases (Memgraph), with GPU-accelerated implementations
+(GVE-Leiden, cuGraph) processing 400M+ edges/sec on multi-billion-edge
+graphs, cited for fraud-ring detection, recommendation systems, and RAG
+indexing. The honest comparative narrative for both the flat and multilevel
+versions is not "ants already run in prod, we're just faster" (false) but
+"this mechanism sat in academic literature for close to two decades without
+a serious practical/production-shaped engineering treatment; this project
+gives it one and reports the result honestly."
 
 ### Gravity analogy - refinement
 
