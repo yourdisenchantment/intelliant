@@ -69,6 +69,18 @@ dev = [
     "vulture",
 ]
 
+[tool.uv]
+# Resolve only for the platforms this project is actually developed and tested
+# on: CI runs ubuntu-latest, development happens on linux and macOS. win32 is
+# excluded deliberately - numba pins numpy<2.5 there, which cannot be satisfied
+# alongside the numpy this project resolves to, and Windows has never been
+# tested. This narrows the lock file only; it adds no upper bounds and does not
+# change the metadata a user installs against.
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'darwin'",
+]
+
 [tool.uv.pip]
 torch-backend = "auto"
 
